@@ -9,7 +9,6 @@ import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
-import CalendlyWidget from "@/components/CalendlyWidget";
 
 export default function Privacy() {
   return (
@@ -249,8 +248,7 @@ export default function Privacy() {
         </div>
       </section>
 
-      {/* Contact and Calendly Section */}
-      <section className="py-20 bg-gray-50">
+      <PublicFooter />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             
@@ -353,7 +351,6 @@ export default function Privacy() {
             <p>&copy; 2024 RepairRequest by SchoolHouse Logistics. All rights reserved.</p>
           </div>
         </div>
-      </footer>
       
       <ScrollToTop />
     </div>
