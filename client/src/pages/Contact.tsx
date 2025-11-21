@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Mail, Phone, Clock, Calendar } from "lucide-react";
+import { MapPin, Mail, Phone, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -267,84 +266,6 @@ export default function Contact() {
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                 Schedule Demo
               </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact and Calendly Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
-            {/* Schedule a Meeting - Calendly Widget */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Calendar className="h-8 w-8 text-blue-600 mr-3" />
-                <h2 className="text-2xl font-bold text-gray-900">Schedule a Meeting</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Book a call with our team to discuss your organization's needs and explore our solutions.
-              </p>
-              
-              {/* Calendly Embed */}
-              <CalendlyWidget />
-            </div>
-
-            {/* Get In Touch - Contact Form */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Mail className="h-8 w-8 text-blue-600 mr-3" />
-                <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Ready to transform your operations? Send us a message and we'll get back to you promptly.
-              </p>
-              
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input placeholder="First Name *" required />
-                  </div>
-                  <div>
-                    <Input placeholder="Last Name *" required />
-                  </div>
-                </div>
-                <div>
-                  <Input type="email" placeholder="Email Address *" required />
-                </div>
-                <div>
-                  <Input placeholder="Organization/Company" />
-                </div>
-                <div>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Organization Type *" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="education">Education/School District</SelectItem>
-                      <SelectItem value="commercial">Commercial Real Estate</SelectItem>
-                      <SelectItem value="residential">Residential Communities</SelectItem>
-                      <SelectItem value="healthcare">Healthcare Facility</SelectItem>
-                      <SelectItem value="government">Government/Municipality</SelectItem>
-                      <SelectItem value="hospitality">Hospitality</SelectItem>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Textarea 
-                    placeholder="Message *" 
-                    rows={4}
-                    required
-                  />
-                </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Message
-                </Button>
-              </form>
             </div>
           </div>
         </div>
