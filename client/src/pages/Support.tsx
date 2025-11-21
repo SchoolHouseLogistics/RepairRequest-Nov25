@@ -303,7 +303,7 @@ export default function Support() {
       </section>
 
       <PublicFooter />
-      
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

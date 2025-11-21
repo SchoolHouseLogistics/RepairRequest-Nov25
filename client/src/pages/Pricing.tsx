@@ -340,7 +340,7 @@ export default function Pricing() {
       </section>
 
       <PublicFooter />
-      
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

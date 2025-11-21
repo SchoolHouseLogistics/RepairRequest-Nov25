@@ -272,7 +272,7 @@ export default function Contact() {
       </section>
 
       <PublicFooter />
-      
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

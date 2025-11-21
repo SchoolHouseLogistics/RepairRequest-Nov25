@@ -102,6 +102,7 @@ export default function FAQ() {
       </main>
 
       <PublicFooter />
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

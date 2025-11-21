@@ -359,7 +359,7 @@ export default function Features() {
       </section>
 
       <PublicFooter />
-      
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

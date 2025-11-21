@@ -306,6 +306,7 @@ export default function Terms() {
       </section>
 
       <PublicFooter />
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

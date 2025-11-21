@@ -248,6 +248,7 @@ export default function Privacy() {
       </section>
 
       <PublicFooter />
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );

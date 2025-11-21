@@ -288,7 +288,7 @@ export default function About() {
       </section>
 
       <PublicFooter />
-      
+      <ScrollToTopButton />
       <ScrollToTop />
     </div>
   );
