@@ -327,11 +327,10 @@ export default function Features() {
                 </div>
                 <div>
                   <select 
-                    placeholder="Organization Type *"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     required
                   >
-                    <option value="">Select organization type</option>
+                    <option value="">Select organization type *</option>
                     <option value="education">Education</option>
                     <option value="commercial-real-estate">Commercial Real Estate</option>
                     <option value="residential-communities">Residential Communities</option>

@@ -353,6 +353,22 @@ export default function LandingPage() {
                   <Input placeholder="Organization/Company" />
                 </div>
                 <div>
+                  <select 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Select organization type *</option>
+                    <option value="education">Education</option>
+                    <option value="commercial-real-estate">Commercial Real Estate</option>
+                    <option value="residential-communities">Residential Communities</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="government">Government</option>
+                    <option value="hospitality">Hospitality</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
                   <Textarea 
                     placeholder="Message *" 
                     rows={4}
