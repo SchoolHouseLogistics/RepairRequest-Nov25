@@ -162,7 +162,7 @@ export default function Contact() {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         required
                       >
-                        <option value="">Select an organization type</option>
+                        <option value="" style={{color: '#9ca3af'}}>Select an organization type</option>
                         <option value="education">Education</option>
                         <option value="commercial-real-estate">Commercial Real Estate</option>
                         <option value="residential-communities">Residential Communities</option>
@@ -188,12 +188,11 @@ export default function Contact() {
                       </select>
                     </div>
                     <div>
-                      <Label htmlFor="message">Message *</Label>
+                      <Label htmlFor="message">Message</Label>
                       <Textarea 
                         id="message" 
                         placeholder="Please describe how we can help you..."
                         rows={5}
-                        required
                       />
                     </div>
                     <Button className="w-full bg-blue-600 hover:bg-blue-700">
