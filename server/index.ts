@@ -47,10 +47,15 @@ app.use(session({
     },
     tableName: 'sessions',
   }),
-  secret: "your-secret", // use a strong secret in production!
+  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev-secret-change-in-production'),
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, sameSite: "lax" }
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    maxAge: 1000 * 60 * 60 * 24 // 24 hours
+  }
 }));
 
 // Middleware to set req.user and req.isAuthenticated for local login

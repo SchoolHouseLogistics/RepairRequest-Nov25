@@ -120,23 +120,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/users/bulk", isAuthenticated, async (req: any, res) => {
     try {
-      console.log("=== BULK IMPORT SESSION DEBUG ===");
-      console.log("Session ID:", req.sessionID);
-      console.log("Session exists:", !!req.session);
-      console.log("Session user:", req.session?.user);
       console.log("req.user:", req.user);
 
       // Extract user ID from session authentication
       const currentUserId = req.user?.id || req.user?.claims?.sub;
-      console.log("Current user ID from session:", currentUserId);
-      console.log("Full user object:", req.user);
 
       if (!currentUserId) {
         return res.status(401).json({ message: "User ID not found in session" });
       }
 
       const currentUser = await dbStorage.getUser(currentUserId);
-      console.log("Current user from database:", currentUser);
 
       if (!currentUser) {
         return res.status(404).json({ message: "User not found in database" });
@@ -146,11 +139,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
-      console.log("=== BULK IMPORT DEBUG ===");
-      console.log("Request body:", req.body);
-      console.log("Users array:", req.body.users);
-      console.log("Users array type:", typeof req.body.users);
-      console.log("Users array length:", req.body.users?.length);
 
       if (!req.body.users) {
         console.error("No users array in request body");
@@ -224,7 +212,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // app.get("/api/auth/callback/google", async (req, res) => {
   //   console.log("=== PRIORITY OAUTH CALLBACK HANDLER ===");
   //   console.log("Query params:", req.query);
-  //   console.log("Session ID:", req.sessionID);
 
   //   try {
   //     // Check for OAuth errors from Google
@@ -311,7 +298,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //       }
 
   //       console.log("User successfully logged in:", user.email);
-  //       console.log("Session after login:", req.sessionID);
 
   //       // Redirect to dashboard
   //       return res.redirect("/dashboard");
@@ -379,9 +365,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Priority facilities request creation route (FACILITIES ONLY - building requests go to /api/building-requests)
   app.post("/api/requests", async (req, res) => {
     console.log("=== FACILITIES REQUEST HANDLER (NOT BUILDING) ===");
-    console.log("Request body:", req.body);
-    console.log("Is authenticated:", req.isAuthenticated?.());
-    console.log("User:", req.user);
 
     try {
       // Check authentication
@@ -399,7 +382,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userOrg: user.organizationId,
         userEmail: user.email
       });
-      console.log("Request body received:", JSON.stringify(req.body, null, 2));
 
       // REDIRECT BUILDING REQUESTS TO PROPER ENDPOINT
       if (req.body.requestType === "building" || req.body["building.description"]) {
@@ -536,9 +518,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Priority facilities endpoint
   app.get("/api/facilities", async (req, res) => {
     console.log("=== PRIORITY FACILITIES HANDLER ===");
-    console.log("Is authenticated:", req.isAuthenticated?.());
-    console.log("User:", req.user);
-    console.log("Session at /api/facilities:", req.session);
 
     try {
       // Check authentication
@@ -569,9 +548,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/requests/:id/status", async (req, res) => {
     console.log("=== PRIORITY STATUS UPDATE HANDLER ===");
     console.log("Request ID:", req.params.id);
-    console.log("Request body:", req.body);
-    console.log("Is authenticated:", req.isAuthenticated?.());
-    console.log("User:", req.user);
 
     try {
       // Check authentication
@@ -656,7 +632,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/requests/recent", async (req, res) => {
     console.log("=== PRIORITY RECENT REQUESTS ===");
-    console.log("User:", req.user?.role, req.user?.organizationId);
 
     try {
       if (!req.isAuthenticated?.() || !req.user) {
@@ -1008,7 +983,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/test-upload", (req, res, next) => {
     console.log("=== TEST UPLOAD STARTED ===");
     console.log("Request content-type:", req.headers['content-type']);
-    console.log("Request body keys:", Object.keys(req.body));
 
     upload.single('test')(req, res, (err) => {
       console.log("=== TEST UPLOAD MULTER CALLBACK ===");
@@ -1021,7 +995,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        console.log("=== TEST UPLOAD DEBUG ===");
         console.log("File received:", req.file);
         console.log("Body received:", req.body);
 
@@ -1068,9 +1041,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', async (req: any, res) => {
     try {
       console.log("=== /api/auth/user endpoint ===");
-      console.log("Session ID:", req.sessionID);
-      console.log("Session exists:", !!req.session);
-      console.log("Session user:", req.session?.user);
 
       if (!req.session.user) {
         return res.status(401).json({ message: "Not authenticated" });
@@ -1194,9 +1164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("Request method:", req.method);
     console.log("Content-Type:", req.headers['content-type']);
     console.log("Auth header:", req.headers.authorization);
-    console.log("Session ID:", req.sessionID);
-    console.log("Is authenticated:", req.isAuthenticated?.());
-    console.log("User:", req.user);
 
     // Check auth first
     if (!req.isAuthenticated?.() || !req.user) {
@@ -1268,7 +1235,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Detailed logging for file uploads
       if (req.files && req.files.length > 0) {
-        console.log("=== FILE UPLOAD DEBUG ===");
         req.files.forEach((file: any, index: number) => {
           console.log(`File ${index + 1}:`, {
             originalname: file.originalname,
@@ -1288,7 +1254,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`File stats:`, { size: stats.size, mode: stats.mode });
           }
         });
-        console.log("=== END FILE UPLOAD DEBUG ===");
       } else {
         console.log("No files uploaded with this request");
       }
@@ -1664,9 +1629,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("=== DIRECT STATUS UPDATE TEST ===");
       console.log("Request ID:", req.params.id);
-      console.log("Request body:", req.body);
-      console.log("Session:", req.session);
-      console.log("User:", req.user);
 
       const requestId = parseInt(req.params.id);
 
@@ -1697,8 +1659,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("=== STATUS UPDATE REQUEST ===");
       console.log("Request ID:", req.params.id);
-      console.log("Request body:", req.body);
-      console.log("User:", { id: req.userId, role: req.user?.role });
 
       // User is already authenticated by authMiddleware
       const userId = req.userId;
@@ -1806,7 +1766,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log("=== Organizations API Debug ===");
     console.log("Request headers:", req.headers);
     console.log("Request user:", req.user);
-    console.log("Session:", req.session);
 
     try {
       // Skip authentication temporarily to identify the issue
@@ -2470,15 +2429,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Extract user ID from session authentication
       const currentUserId = req.user?.id || req.user?.claims?.sub;
-      console.log("Current user ID from session:", currentUserId);
-      console.log("Full user object:", req.user);
 
       if (!currentUserId) {
         return res.status(401).json({ message: "User ID not found in session" });
       }
 
       const currentUser = await dbStorage.getUser(currentUserId);
-      console.log("Current user from database:", currentUser);
 
       if (!currentUser) {
         return res.status(404).json({ message: "User not found in database" });
