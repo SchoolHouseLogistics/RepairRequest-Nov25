@@ -59,11 +59,10 @@ export default function Features() {
             Comprehensive Feature Set
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Everything You Need for
-            <span className="text-blue-600 block">Facility Management</span>
+            Smart Maintenance Management for Any Organization
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            RepairRequest provides a complete suite of tools to streamline your maintenance operations, from request submission to completion tracking.
+            RepairRequest brings structure to your facility operations with easy request submission, organized work orders, and transparent progress tracking.
           </p>
         </div>
       </section>
