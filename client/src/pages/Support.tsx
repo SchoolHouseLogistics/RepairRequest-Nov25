@@ -139,6 +139,23 @@ export default function Support() {
                     <Input id="organization" placeholder="Your organization name" />
                   </div>
                   <div>
+                    <Label htmlFor="organizationType">Organization Type</Label>
+                    <select 
+                      id="organizationType"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select an organization type</option>
+                      <option value="education">Education</option>
+                      <option value="commercial-real-estate">Commercial Real Estate</option>
+                      <option value="residential-communities">Residential Communities</option>
+                      <option value="healthcare">Healthcare</option>
+                      <option value="government">Government</option>
+                      <option value="hospitality">Hospitality</option>
+                      <option value="manufacturing">Manufacturing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
                     <Label htmlFor="subject">Subject</Label>
                     <Input id="subject" placeholder="How can we help?" />
                   </div>
