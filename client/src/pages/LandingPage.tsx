@@ -58,15 +58,28 @@ export default function LandingPage() {
             {/* Left Content */}
             <div className="text-center lg:text-left">
               <Badge className="mb-6 bg-blue-100 text-blue-800 hover:bg-blue-100">
-                Trusted by Property Managers Nationwide
+                Trusted by Teams Across Every Industry
               </Badge>
               <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-                Streamline Your
-                <span className="text-blue-600 block">Maintenance Requests</span>
+                Streamline Maintenance & Work Requests for Your Entire Organization
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                RepairRequest is the comprehensive maintenance management platform for property managers, facility teams, and organizations. From schools to commercial real estate, track and resolve facility issues with ease.
+                RepairRequest gives businesses one simple platform to capture issues, assign tasks, track progress, and keep teams aligned—no matter what type of facilities you manage.
               </p>
+              <div className="space-y-3 mb-8 max-w-2xl mx-auto lg:mx-0">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-700">Submit requests in seconds with photos, categories & priority</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-700">Auto-assign tasks to the right team and track status in real time</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-700">Reduce downtime & keep operations running smoothly</span>
+                </div>
+              </div>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link to="/login">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
