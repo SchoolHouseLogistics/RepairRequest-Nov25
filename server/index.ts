@@ -40,6 +40,17 @@ const createSessionsTable = async () => {
 // Initialize sessions table
 createSessionsTable();
 
+// Get or generate session secret
+const getSessionSecret = (): string => {
+  if (process.env.SESSION_SECRET) {
+    return process.env.SESSION_SECRET;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SESSION_SECRET environment variable is required in production');
+  }
+  return 'dev-secret-change-in-production';
+};
+
 app.use(session({
   store: new PostgresStore({
     conObject: {
@@ -47,7 +58,7 @@ app.use(session({
     },
     tableName: 'sessions',
   }),
-  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev-secret-change-in-production'),
+  secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
   cookie: { 
