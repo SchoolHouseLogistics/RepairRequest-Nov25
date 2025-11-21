@@ -997,18 +997,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test upload endpoint for debugging (no auth for testing)
-  app.post("/api/test-upload", (req, res, next) => {
+  app.post("/api/test-upload", uploadLimiter, (req, res, next) => {
     console.log("=== TEST UPLOAD STARTED ===");
     console.log("Request content-type:", req.headers['content-type']);
 
-    upload.single('test')(req, res, (err) => {
+    upload.single('test')(req, res, (err: any) => {
       console.log("=== TEST UPLOAD MULTER CALLBACK ===");
       console.log("Multer error:", err);
       console.log("File after multer:", req.file);
 
       if (err) {
         console.error("MULTER ERROR:", err);
-        return res.status(400).json({ error: err.message });
+        return res.status(400).json({ error: err?.message || 'File upload failed' });
       }
 
       try {
@@ -2209,7 +2209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload photo to request
-  app.post("/api/requests/:id/photos", authMiddleware, upload.single('photo'), async (req: any, res) => {
+  app.post("/api/requests/:id/photos", authMiddleware, uploadLimiter, upload.single('photo'), async (req: any, res) => {
     try {
       const { userId } = await getUserInfo(req);
       const requestId = parseInt(req.params.id);
@@ -2251,9 +2251,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try { require('fs').unlinkSync(req.file.path); } catch (e) { /* ignore */ }
       }
       res.status(201).json(photo);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading photo:", error);
-      res.status(500).json({ message: "Failed to upload and save photo" });
+      res.status(500).json({ message: "Failed to upload and save photo", error: error?.message || 'Unknown error' });
     }
   });
 
