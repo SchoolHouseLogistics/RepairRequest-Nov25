@@ -11,10 +11,7 @@ import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
-import { useState } from "react";
-
 export default function Pricing() {
-  const [isAnnual, setIsAnnual] = useState(true);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -63,33 +60,6 @@ export default function Pricing() {
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
             No hidden fees. No setup costs. Just powerful facility and operations management built for your organization.
           </p>
-
-          {/* Pricing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-lg ${!isAnnual ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-              Monthly
-            </span>
-            <button
-              onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                isAnnual ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                  isAnnual ? 'translate-x-7' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className={`text-lg ${isAnnual ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
-              Annual
-            </span>
-            {isAnnual && (
-              <Badge className="bg-green-100 text-green-800 hover:bg-green-100 ml-2">
-                Save up to 20%
-              </Badge>
-            )}
-          </div>
         </div>
       </section>
 
@@ -102,7 +72,7 @@ export default function Pricing() {
             <Card className="border-2 border-blue-600 relative">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Professional</CardTitle>
-                <CardDescription>Best for: Schools, churches, nonprofits, small–medium businesses</CardDescription>
+                <CardDescription>For small-medium organizations</CardDescription>
                 <div className="mt-4">
                   <span className="text-4xl font-bold">$1,000 – $12,000</span>
                   <span className="text-gray-600 block">/year</span>
