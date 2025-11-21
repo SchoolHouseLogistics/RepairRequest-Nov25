@@ -483,11 +483,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user as AuthenticatedUser;
       const userId = user?.id;
 
-        userId,
-        userRole: user.role,
-        userOrg: user.organizationId
-      });
-
       const facilities = await dbStorage.getFacilitiesByOrganization(user.organizationId);
       res.json(facilities);
     } catch (error) {
