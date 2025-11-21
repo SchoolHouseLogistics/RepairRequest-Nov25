@@ -368,11 +368,11 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-800 text-white py-12">
+      <footer className="bg-slate-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-16">
             {/* Left Column - Logo & Social */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 pr-4">
               <div className="flex items-center mb-4">
                 <img src={logoPath} alt="RepairRequest" className="h-8 w-auto mr-3 bg-white p-1 rounded" />
                 <span className="text-xl font-bold">RepairRequest</span>
@@ -400,8 +400,8 @@ export default function LandingPage() {
             </div>
 
             {/* Products Column */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Products</h3>
+            <div className="lg:pl-4">
+              <h3 className="text-lg font-semibold mb-6">Products</h3>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</Link></li>
                 <li><Link to="/faq" className="text-gray-300 hover:text-white transition-colors">FAQ</Link></li>
@@ -412,8 +412,8 @@ export default function LandingPage() {
             </div>
 
             {/* Company Column */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Company</h3>
+            <div className="lg:pl-4">
+              <h3 className="text-lg font-semibold mb-6">Company</h3>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors">About Us</Link></li>
                 <li><Link to="/contact" className="text-gray-300 hover:text-white transition-colors">Contact Us</Link></li>
@@ -423,8 +423,8 @@ export default function LandingPage() {
             </div>
 
             {/* Legal Column */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Legal</h3>
+            <div className="lg:pl-4">
+              <h3 className="text-lg font-semibold mb-6">Legal</h3>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/privacy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/terms" className="text-gray-300 hover:text-white transition-colors">Terms of Service</Link></li>
