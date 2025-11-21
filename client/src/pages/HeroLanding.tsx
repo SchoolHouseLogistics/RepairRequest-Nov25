@@ -32,16 +32,15 @@ export default function HeroLanding() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <Badge className="mb-6 bg-blue-100 text-blue-800 hover:bg-blue-100">
-            Trusted by Property Managers Nationwide
+            Trusted by Teams Across Every Industry
           </Badge>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Streamline Your
-            <span className="text-blue-600 block">Maintenance Requests</span>
+            Streamline Maintenance & Work Requests for Your Entire Organization
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            RepairRequest is the comprehensive maintenance management platform for property managers, facility teams, and organizations. From schools to commercial real estate, track and resolve facility issues with ease.
+          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+            RepairRequest gives businesses one simple platform to capture issues, assign tasks, track progress, and keep teams aligned—no matter what type of facilities you manage.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link to="/signup">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                 Get Started Today
@@ -52,6 +51,22 @@ export default function HeroLanding() {
                 Schedule Demo
               </Button>
             </Link>
+          </div>
+
+          {/* Universal Benefits Checkmarks */}
+          <div className="space-y-4 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+              <span className="text-lg text-gray-700">Submit requests in seconds with photos, categories & priority</span>
+            </div>
+            <div className="flex items-center justify-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+              <span className="text-lg text-gray-700">Auto-assign tasks to the right team and track status in real time</span>
+            </div>
+            <div className="flex items-center justify-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+              <span className="text-lg text-gray-700">Reduce downtime & keep operations running smoothly</span>
+            </div>
           </div>
         </div>
       </section>
