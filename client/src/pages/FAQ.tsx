@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -103,100 +102,6 @@ export default function FAQ() {
       </main>
 
       <PublicFooter />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
-            {/* Schedule a Meeting - Calendly Widget */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Calendar className="h-8 w-8 text-blue-600 mr-3 hover:text-blue-700 hover:scale-110 hover:drop-shadow-md transition-all duration-300" />
-                <h2 className="text-2xl font-bold text-gray-900">Schedule a Meeting</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Book a call with our team to discuss your organization's needs and explore our solutions.
-              </p>
-              
-              {/* Calendly Embed */}
-              <CalendlyWidget />
-            </div>
-
-            {/* Get In Touch - Contact Form */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Mail className="h-8 w-8 text-blue-600 mr-3 hover:text-blue-700 hover:scale-110 hover:drop-shadow-md transition-all duration-300" />
-                <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Ready to transform your operations? Send us a message and we'll get back to you promptly.
-              </p>
-              
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input placeholder="First Name *" required />
-                  </div>
-                  <div>
-                    <Input placeholder="Last Name *" required />
-                  </div>
-                </div>
-                <div>
-                  <Input type="email" placeholder="Email Address *" required />
-                </div>
-                <div>
-                  <Input placeholder="Organization/Company" />
-                </div>
-                <div>
-                  <Textarea 
-                    placeholder="Message *" 
-                    rows={4}
-                    required
-                  />
-                </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  <Mail className="h-4 w-4 mr-2 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                  Send Message
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <img src={logoPath} alt="RepairRequest" className="h-8 w-auto mb-4" />
-              <p className="text-gray-400 mb-4">
-                Streamlining facilities management for educational institutions with innovative technology and dedicated support.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2">
-                <li><Link to="/" className="text-gray-400 hover:text-white">Home</Link></li>
-                <li><Link to="/features" className="text-gray-400 hover:text-white">Features</Link></li>
-                <li><Link to="/pricing" className="text-gray-400 hover:text-white">Pricing</Link></li>
-                <li><Link to="/about" className="text-gray-400 hover:text-white">About</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Support</h3>
-              <ul className="space-y-2">
-                <li><Link to="/faq" className="text-gray-400 hover:text-white">FAQ</Link></li>
-                <li><Link to="/support" className="text-gray-400 hover:text-white">Support</Link></li>
-                <li><Link to="/contact" className="text-gray-400 hover:text-white">Contact</Link></li>
-                <li><Link to="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 RepairRequest by SchoolHouse Logistics. All rights reserved.</p>
-          </div>
-        </div>
-      
       <ScrollToTop />
     </div>
   );

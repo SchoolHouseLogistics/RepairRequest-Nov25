@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -249,109 +248,6 @@ export default function Privacy() {
       </section>
 
       <PublicFooter />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            
-            {/* Schedule a Meeting - Calendly Widget */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Calendar className="h-8 w-8 text-blue-600 mr-3" />
-                <h2 className="text-2xl font-bold text-gray-900">Schedule a Meeting</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Book a call with our team to discuss your organization's needs and explore our solutions.
-              </p>
-              
-              {/* Calendly Embed */}
-              <CalendlyWidget />
-            </div>
-
-            {/* Get In Touch - Contact Form */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Mail className="h-8 w-8 text-blue-600 mr-3" />
-                <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Ready to transform your operations? Send us a message and we'll get back to you promptly.
-              </p>
-              
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input placeholder="First Name *" required />
-                  </div>
-                  <div>
-                    <Input placeholder="Last Name *" required />
-                  </div>
-                </div>
-                <div>
-                  <Input type="email" placeholder="Email Address *" required />
-                </div>
-                <div>
-                  <Input placeholder="Organization/Company" />
-                </div>
-                <div>
-                  <Textarea 
-                    placeholder="Message *" 
-                    rows={4}
-                    required
-                  />
-                </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Message
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <Link to="/">
-                <div className="flex items-center space-x-3 mb-4 cursor-pointer">
-                  <img src={logoPath} alt="RepairRequest Logo" className="w-8 h-8" />
-                  <div>
-                    <h3 className="text-lg font-bold">RepairRequest</h3>
-                    <p className="text-sm text-gray-400">by SchoolHouse Logistics</p>
-                  </div>
-                </div>
-              </Link>
-              <p className="text-gray-400">
-                Streamlining maintenance management for property managers and organizations across all industries.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/login" className="hover:text-white transition-colors">Portal Login</Link></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link to="/support" className="hover:text-white transition-colors">Support</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
-                <li><Link to="/terms" className="hover:text-white transition-colors">Terms</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 RepairRequest by SchoolHouse Logistics. All rights reserved.</p>
-          </div>
-        </div>
-      
       <ScrollToTop />
     </div>
   );
