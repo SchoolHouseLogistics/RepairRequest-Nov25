@@ -4,6 +4,7 @@ import { storage as dbStorage } from "./storage";
 import { isAuthenticated } from "./subAuth.js";
 import { sendRequestNotificationEmails } from "./emailService";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
@@ -84,6 +85,22 @@ const bulkSchema = z.array(
 const s3 = new AWS.S3();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Rate limiters for security
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per windowMs
+    message: 'Too many authentication attempts, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const uploadLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 50, // Limit each IP to 50 uploads per hour
+    message: 'Too many uploads, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   // Forgot password endpoint
 
@@ -2624,7 +2641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // === Neon DB Email/Password Signup ===
-  app.post("/api/auth/signup", async (req, res) => {
+  app.post("/api/auth/signup", authLimiter, async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
       if (!email || !password || !firstName || !lastName) {
@@ -2697,7 +2714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       let { email, password } = req.body;
       if (!email || !password) {

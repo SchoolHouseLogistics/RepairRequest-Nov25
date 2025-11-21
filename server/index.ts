@@ -6,9 +6,24 @@ import path from "path";
 import session from "express-session";
 import pgSimple from "connect-pg-simple";
 import { db } from "./db.js";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 // import adminUsersRouter from "./routes/adminUsers";
 
 const app = express();
+
+// Security middleware - Helmet for HTTP headers
+app.use(helmet());
+
+// Rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(express.json({ limit: "5mb" }));
 // app.use(adminUsersRouter);
 
@@ -47,7 +62,7 @@ app.use(session({
     },
     tableName: 'sessions',
   }),
-  secret: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'dev-secret-change-in-production'),
+  secret: (process.env.SESSION_SECRET || 'dev-secret-change-in-production') as string,
   resave: false,
   saveUninitialized: false,
   cookie: { 
