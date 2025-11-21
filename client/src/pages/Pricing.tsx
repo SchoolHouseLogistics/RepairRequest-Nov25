@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, X, Calendar, Mail } from "lucide-react";
+import { CheckCircle, ArrowRight, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
@@ -11,16 +11,18 @@ import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
-import CalendlyWidget from "@/components/CalendlyWidget";
+import { useState } from "react";
 
 export default function Pricing() {
+  const [isAnnual, setIsAnnual] = useState(true);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
         <title>Pricing - RepairRequest Facilities Management Plans</title>
-        <meta name="description" content="Choose the perfect RepairRequest plan for your organization. Starter at $99/month, Professional at $299/month, Enterprise custom pricing. Serves schools, commercial & residential properties. 30-day free trial." />
-        <meta property="og:title" content="RepairRequest Pricing - Affordable Facilities Management" />
-        <meta property="og:description" content="Transparent pricing for comprehensive facility management software. Plans starting at $99/month serving schools, commercial real estate, residential communities & property managers." />
+        <meta name="description" content="Simple, predictable pricing for RepairRequest facilities management. Professional plans from $1,000-$12,000/year based on organization size. Enterprise custom quotes available." />
+        <meta property="og:title" content="RepairRequest Pricing - Transparent Facilities Management" />
+        <meta property="og:description" content="No hidden fees. Transparent pricing for comprehensive facility management software based on your organization size." />
       </Helmet>
       
       <PublicHeader currentPage="pricing" />
@@ -54,107 +56,101 @@ export default function Pricing() {
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Simple, Transparent
-            <span className="text-blue-600 block">Pricing</span>
+            Simple, Predictable Pricing
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Choose the plan that fits your organization's needs. All plans include unlimited requests and 24/7 support.
+            No hidden fees. No setup costs. Just powerful facility and operations management built for your organization.
           </p>
+
+          {/* Pricing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-lg ${!isAnnual ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setIsAnnual(!isAnnual)}
+              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                isAnnual ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                  isAnnual ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-lg ${isAnnual ? 'font-bold text-gray-900' : 'text-gray-600'}`}>
+              Annual
+            </span>
+            {isAnnual && (
+              <Badge className="bg-green-100 text-green-800 hover:bg-green-100 ml-2">
+                Save up to 20%
+              </Badge>
+            )}
+          </div>
         </div>
       </section>
 
       {/* Pricing Cards */}
       <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             
-            {/* Starter Plan */}
-            <Card className="border-2 border-gray-200 relative">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Starter</CardTitle>
-                <CardDescription>Perfect for small organizations</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">$199</span>
-                  <span className="text-gray-600">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Up to 5 buildings</span>
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Up to 50 users</span>
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Unlimited requests</span>
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Email notifications</span>
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Basic reporting</span>
-                  </li>
-                  <li className="flex items-center">
-                    <X className="h-5 w-5 text-gray-400 mr-3 hover:text-red-500 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span className="text-gray-400">Advanced analytics</span>
-                  </li>
-                </ul>
-                <Button className="w-full mt-6" variant="outline">
-                  Get Started
-                </Button>
-              </CardContent>
-            </Card>
-
             {/* Professional Plan */}
             <Card className="border-2 border-blue-600 relative">
-              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600">
-                Most Popular
-              </Badge>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Professional</CardTitle>
-                <CardDescription>Ideal for growing organizations</CardDescription>
+                <CardDescription>Best for: Schools, churches, nonprofits, small–medium businesses</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">$399</span>
-                  <span className="text-gray-600">/month</span>
+                  <span className="text-4xl font-bold">$1,000 – $12,000</span>
+                  <span className="text-gray-600 block">/year</span>
+                  <p className="text-sm text-gray-500 mt-2">(Price adjusts based on organization size)</p>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Up to 10 buildings</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Complete onboarding & setup</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Up to 125 users</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>12 months of support</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Unlimited requests</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Unlimited tickets, repairs, and requests</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Email & SMS notifications</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Email + SMS notifications</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Advanced reporting</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Photo/file attachments</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Priority support</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Multi-building management</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Role-based access control</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Reporting & analytics dashboard</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Regular updates & new features</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-700">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-6">
                   Get Started
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>
@@ -163,40 +159,45 @@ export default function Pricing() {
             <Card className="border-2 border-gray-200 relative">
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Enterprise</CardTitle>
-                <CardDescription>For large organizations</CardDescription>
+                <CardDescription>For larger organizations with advanced needs</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">Custom</span>
+                  <span className="text-4xl font-bold">Custom Quote</span>
+                  <p className="text-sm text-gray-500 mt-2">Contact us for pricing</p>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <div className="bg-blue-50 p-3 rounded mb-4">
+                  <p className="text-sm font-semibold text-gray-900">Includes everything in Professional, plus:</p>
+                </div>
                 <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Unlimited buildings</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Unlimited members & buildings</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Unlimited users</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Advanced analytics + forecasting</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Custom integrations</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>API & SSO options</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>Dedicated support</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>White-label & branding</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>SLA guarantee</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Priority support</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span>On-premise deployment</span>
+                  <li className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-3 flex-shrink-0 mt-0.5" />
+                    <span>Custom onboarding & workflow setup</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6" variant="outline">
+                <Button className="w-full" variant="outline" data-testid="button-contact-sales">
                   Contact Sales
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>
@@ -204,137 +205,111 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* FAQ Section */}
+      {/* Pricing Bands Table */}
       <section className="py-20 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
+              Size-Based Pricing Bands
             </h2>
+            <p className="text-xl text-gray-600">
+              What determines your price?
+            </p>
+            <p className="text-gray-600 mt-2">
+              Your annual subscription is based only on organization size — so you never overpay.
+            </p>
           </div>
 
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Can I change plans at any time?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any billing adjustments.
-                </p>
-              </CardContent>
-            </Card>
-
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>What kind of support do you provide?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  All plans include email support. Professional and Enterprise plans receive priority support with faster response times. Enterprise customers get dedicated support representatives.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Can I integrate RepairRequest with other systems?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  Professional plans include standard integrations via API. Enterprise plans include custom integrations and dedicated technical support for implementation.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Is my data secure?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  We use enterprise-grade security with 256-bit encryption, regular security audits, and comply with industry standards. Enterprise plans can opt for on-premise deployment for additional security.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="border-0 shadow-lg">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-100">
+                      <th className="px-6 py-4 text-left font-semibold text-gray-900">Organization Size</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-900">Annual Price Range</th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-900">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-6 py-4 font-semibold text-gray-900">Small</td>
+                      <td className="px-6 py-4 text-gray-600">$1,000 – $2,500</td>
+                      <td className="px-6 py-4 text-gray-600">Single building, small staff, fewer workflows</td>
+                    </tr>
+                    <tr className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-6 py-4 font-semibold text-gray-900">Medium</td>
+                      <td className="px-6 py-4 text-gray-600">$2,500 – $6,000</td>
+                      <td className="px-6 py-4 text-gray-600">Multi-department teams, multiple buildings</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-semibold text-gray-900">Large</td>
+                      <td className="px-6 py-4 text-gray-600">$6,000 – $12,000</td>
+                      <td className="px-6 py-4 text-gray-600">Districts, large campuses, enterprise ops</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
-      {/* Contact and Calendly Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      {/* Contact Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="flex items-center mb-6">
+              <Mail className="h-8 w-8 text-blue-600 mr-3" />
+              <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Have questions about our pricing or need a custom quote? Contact our sales team and we'll get back to you promptly.
+            </p>
             
-            {/* Schedule a Meeting - Calendly Widget */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Calendar className="h-8 w-8 text-blue-600 mr-3 hover:text-blue-700 hover:scale-110 hover:drop-shadow-md transition-all duration-300" />
-                <h2 className="text-2xl font-bold text-gray-900">Schedule a Meeting</h2>
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Input placeholder="First Name *" required />
+                </div>
+                <div>
+                  <Input placeholder="Last Name *" required />
+                </div>
               </div>
-              <p className="text-gray-600 mb-6">
-                Book a call with our team to discuss your organization's needs and explore our solutions.
-              </p>
-              
-              {/* Calendly Embed */}
-              <CalendlyWidget />
-            </div>
-
-            {/* Get In Touch - Contact Form */}
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <div className="flex items-center mb-6">
-                <Mail className="h-8 w-8 text-blue-600 mr-3 hover:text-blue-700 hover:scale-110 hover:drop-shadow-md transition-all duration-300" />
-                <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
+              <div>
+                <Input type="email" placeholder="Email Address *" required />
               </div>
-              <p className="text-gray-600 mb-6">
-                Ready to transform your operations? Send us a message and we'll get back to you promptly.
-              </p>
-              
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input placeholder="First Name *" required />
-                  </div>
-                  <div>
-                    <Input placeholder="Last Name *" required />
-                  </div>
-                </div>
-                <div>
-                  <Input type="email" placeholder="Email Address *" required />
-                </div>
-                <div>
-                  <Input placeholder="Organization/Company" />
-                </div>
-                <div>
-                  <select 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{color: 'hsl(25, 5.3%, 44.7%)'}}
-                    required
-                  >
-                    <option value="">Select organization type *</option>
-                    <option value="education">Education</option>
-                    <option value="commercial-real-estate">Commercial Real Estate</option>
-                    <option value="residential-communities">Residential Communities</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="government">Government</option>
-                    <option value="hospitality">Hospitality</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <Textarea 
-                    placeholder="Message" 
-                    rows={4}
-                  />
-                </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  <Mail className="h-4 w-4 mr-2 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                  Send Message
-                </Button>
-              </form>
-            </div>
+              <div>
+                <Input placeholder="Organization/Company" />
+              </div>
+              <div>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{color: 'hsl(25, 5.3%, 44.7%)'}}
+                  required
+                >
+                  <option value="">Select organization type *</option>
+                  <option value="education">Education</option>
+                  <option value="commercial-real-estate">Commercial Real Estate</option>
+                  <option value="residential-communities">Residential Communities</option>
+                  <option value="healthcare">Healthcare</option>
+                  <option value="government">Government</option>
+                  <option value="hospitality">Hospitality</option>
+                  <option value="manufacturing">Manufacturing</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <Textarea 
+                  placeholder="Message" 
+                  rows={4}
+                />
+              </div>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                <Mail className="h-4 w-4 mr-2" />
+                Send Message
+              </Button>
+            </form>
           </div>
         </div>
       </section>
