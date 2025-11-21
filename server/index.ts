@@ -24,6 +24,18 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Input validation middleware - sanitize and validate incoming data
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === 'object') {
+    for (const key in req.body) {
+      if (typeof req.body[key] === 'string') {
+        req.body[key] = req.body[key].trim().slice(0, 10000); // Prevent extremely large strings
+      }
+    }
+  }
+  next();
+});
+
 app.use(express.json({ limit: "5mb" }));
 // app.use(adminUsersRouter);
 
