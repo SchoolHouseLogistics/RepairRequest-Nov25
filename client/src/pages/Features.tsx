@@ -9,6 +9,7 @@ import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
+import PublicFooter from "@/components/PublicFooter";
 
 export default function Features() {
   return (
