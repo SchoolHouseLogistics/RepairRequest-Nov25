@@ -11,6 +11,7 @@ import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import CalendlyWidget from "@/components/CalendlyWidget";
 
 export default function Features() {
   return (
@@ -296,8 +297,7 @@ export default function Features() {
               </p>
               
               {/* Calendly Embed */}
-              <div className="calendly-inline-widget" data-url="https://calendly.com/schoolhouselogistics/30min" style={{minWidth: '320px', height: '630px'}}></div>
-              <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+              <CalendlyWidget />
             </div>
 
             {/* Get In Touch - Contact Form */}
