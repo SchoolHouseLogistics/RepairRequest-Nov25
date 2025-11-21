@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useState } from "react"
 import { queryClient } from "@/lib/queryClient";
+import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -60,11 +61,13 @@ export default function LoginPage() {
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl w-full flex">
         {/* Left Panel - Login Form */}
         <div className="w-full lg:w-1/2 p-8 lg:p-12">
-          {/* LOgo */}
-          <div className="flex items-center gap-2 mb-8">
-            <img src="/RepairRequest Logo Transparent_1750783382845.png" alt="RepairRequest Logo" className="w-10 h-10" />
-            <span className="text-lg font-semibold text-gray-900">Repair Request</span>
-          </div>
+          {/* Logo */}
+          <Link to="/">
+            <div className="flex items-center gap-2 mb-8 cursor-pointer hover:opacity-80 transition-opacity">
+              <img src={logoPath} alt="RepairRequest Logo" className="w-10 h-10" />
+              <span className="text-lg font-semibold text-gray-900">RepairRequest</span>
+            </div>
+          </Link>
 
           {/* Header */}
           <div className="mb-8">
