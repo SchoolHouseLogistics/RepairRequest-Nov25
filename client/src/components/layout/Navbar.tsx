@@ -120,7 +120,7 @@ export default function Navbar({ toggleMobileSidebar, user }: NavbarProps) {
                       await fetch("/api/logout", { credentials: "include" });
                       // Clear React Query cache
                       queryClient.clear();
-                      window.location.href = "/";
+                      window.location.href = "/landing";
                     }}
                   >
                     <span className="material-icons text-sm mr-2">logout</span>
