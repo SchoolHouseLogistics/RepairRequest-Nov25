@@ -258,27 +258,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find or create user
       let user = await dbStorage.getUserByEmail(profile.email);
       if (!user) {
-        // Create new user
+        // Create new user using upsertUser
         const userData = {
           id: profile.id,
           email: profile.email,
           firstName: profile.given_name || '',
           lastName: profile.family_name || '',
-          role: 'requester',
+          role: 'requester' as const,
           organizationId: null,
           profileImageUrl: profile.picture || null,
         };
-        user = await dbStorage.createUser(userData as any);
+        user = await dbStorage.upsertUser(userData);
       }
 
       // Set session
       req.session!.user = {
         id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        organizationId: user.organizationId,
+        email: user.email || '',
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        role: user.role || 'requester',
+        organizationId: user.organizationId ?? undefined,
       };
 
       res.redirect("/dashboard");
@@ -290,6 +290,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Login route with priority registration
   app.get("/api/login", (req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const redirectUri = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`;
+    const scope = "profile email";
+    const state = req.sessionID;
+
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `response_type=code&` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `state=${state}`;
+
+    res.redirect(googleAuthUrl);
+  });
+
+  // Alias route for /api/auth/google (some pages use this URL)
+  app.get("/api/auth/google", (req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const redirectUri = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`;
     const scope = "profile email";
