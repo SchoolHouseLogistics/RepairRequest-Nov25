@@ -129,7 +129,7 @@ export default function Sidebar({ isMobileOpen, closeMobileSidebar, user }: Side
               if (isMobileOpen) {
                 closeMobileSidebar();
               }
-              await fetch(`${import.meta.env.VITE_API_URL}/api/logout`, { credentials: "include" });
+              await fetch(`/api/logout`, { credentials: "include" });
               // Clear React Query cache
               queryClient.clear();
               window.location.href = "/";

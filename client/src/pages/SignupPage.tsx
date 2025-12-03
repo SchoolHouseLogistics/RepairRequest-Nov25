@@ -53,7 +53,7 @@ export default function SignupPage() {
         return;
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/signup`, {
+      const res = await fetch(`/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json"},
         body: JSON.stringify({ email, password, firstName, lastName }),
@@ -118,7 +118,7 @@ export default function SignupPage() {
               variant="outline"
               className="flex-1 h-12 border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2 bg-transparent"
               onClick={() => {
-                window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/google`;
+                window.location.href = `/api/auth/google`;
               }}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">

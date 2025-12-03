@@ -4,7 +4,7 @@ export function useAuth() {
   const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/user`, {
+      const res = await fetch(`/api/auth/user`, {
         credentials: "include",
       });
       if (!res.ok) {

@@ -40,7 +40,7 @@ export default function RequestForm() {
   const { data: facilities, isLoading: facilitiesLoading, error: facilitiesError } = useQuery({
     queryKey: ["/api/facilities"],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/facilities`, { credentials: "include" });
+      const res = await fetch(`/api/facilities`, { credentials: "include" });
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`${res.status}: ${errorText}`);
