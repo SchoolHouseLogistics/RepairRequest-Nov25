@@ -130,7 +130,9 @@ Changelog:
 - December 3, 2025: Removed addresses from all pages (Privacy, Terms, Contact)
 - December 3, 2025: Updated contact info across site: email info@schoolhouselogistics.com, phone (407) 494-5230
 - December 3, 2025: Created Accessibility page with WCAG 2.1 Level AA compliance statement
-- December 3, 2025: Updated Legal section in footer to include Privacy Policy, Terms of Service, and Accessibility
+- December 3, 2025: Created Data Security page with encryption and compliance information
+- December 3, 2025: Created Cookie Policy page explaining cookie usage and management
+- December 3, 2025: Updated Legal section in footer with all 5 pages: Privacy Policy, Terms of Service, Data Security, Cookie Policy, Accessibility
 ```
 
 ## User Preferences
