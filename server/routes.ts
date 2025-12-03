@@ -260,7 +260,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/?error=no_email");
       }
 
-      // Find or create user
+      // Find or create user - assign new users to New School (org ID 2) by default
+      const DEFAULT_ORGANIZATION_ID = 2; // New School
       let user = await dbStorage.getUserByEmail(profile.email);
       if (!user) {
         // Create new user using upsertUser
@@ -270,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: profile.given_name || '',
           lastName: profile.family_name || '',
           role: 'requester' as const,
-          organizationId: null,
+          organizationId: DEFAULT_ORGANIZATION_ID,
           profileImageUrl: profile.picture || null,
         };
         user = await dbStorage.upsertUser(userData);
@@ -2714,9 +2715,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashed = await bcrypt.hash(password, 10);
 
-      // Create user
+      // Create user - assign to New School (org ID 2) by default
       const id = crypto.randomUUID();
       const now = new Date();
+      const DEFAULT_ORGANIZATION_ID = 2; // New School
       const [user] = await db.insert(users).values({
         id,
         email,
@@ -2724,6 +2726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
         password: hashed,
         role: "requester",
+        organizationId: DEFAULT_ORGANIZATION_ID,
         createdAt: now,
         updatedAt: now,
       }).returning();
