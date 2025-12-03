@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useState } from "react"
+import { Helmet } from "react-helmet-async";
 import { queryClient } from "@/lib/queryClient";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 
@@ -58,6 +59,16 @@ export default function LoginPage() {
   };
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <Helmet>
+        <title>Login - RepairRequest Facilities Management Portal</title>
+        <meta name="description" content="Log in to your RepairRequest account to manage maintenance requests, track work orders, and access your facilities management dashboard." />
+        <link rel="canonical" href="https://www.repairrequest.org/login" />
+        <meta property="og:title" content="Login to RepairRequest" />
+        <meta property="og:description" content="Access your facilities management dashboard and maintenance tracking system." />
+        <meta property="og:url" content="https://www.repairrequest.org/login" />
+        <meta name="twitter:title" content="Login to RepairRequest" />
+        <meta name="twitter:description" content="Access your facilities management dashboard." />
+      </Helmet>
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl w-full flex">
         {/* Left Panel - Login Form */}
         <div className="w-full lg:w-1/2 p-8 lg:p-12">

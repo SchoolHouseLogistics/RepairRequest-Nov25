@@ -6,12 +6,23 @@ import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
+import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Helmet>
+        <title>Privacy Policy - RepairRequest Data Protection</title>
+        <meta name="description" content="RepairRequest privacy policy. Learn how we collect, use, and protect your data. We're committed to safeguarding your information and privacy." />
+        <link rel="canonical" href="https://www.repairrequest.org/privacy" />
+        <meta property="og:title" content="RepairRequest Privacy Policy" />
+        <meta property="og:description" content="Learn how RepairRequest protects your data and privacy." />
+        <meta property="og:url" content="https://www.repairrequest.org/privacy" />
+        <meta name="twitter:title" content="RepairRequest Privacy Policy" />
+        <meta name="twitter:description" content="Our commitment to protecting your data and privacy." />
+      </Helmet>
       
       <PublicHeader currentPage="" />
 

@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
+import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CalendlyWidget from "@/components/CalendlyWidget";
@@ -15,8 +16,18 @@ import CalendlyWidget from "@/components/CalendlyWidget";
 export default function Support() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Helmet>
+        <title>Support - RepairRequest Customer Help Center</title>
+        <meta name="description" content="Get help with RepairRequest facilities management software. Access customer support, documentation, training resources, and contact our team for assistance." />
+        <link rel="canonical" href="https://www.repairrequest.org/support" />
+        <meta property="og:title" content="RepairRequest Support - Help Center" />
+        <meta property="og:description" content="Access customer support, documentation, and training resources for RepairRequest facilities management platform." />
+        <meta property="og:url" content="https://www.repairrequest.org/support" />
+        <meta name="twitter:title" content="RepairRequest Support - Help Center" />
+        <meta name="twitter:description" content="Get help with RepairRequest facilities management software." />
+      </Helmet>
       
-      <PublicHeader currentPage="" />
+      <PublicHeader currentPage="support" />
 
       {/* Promotional Banner */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">

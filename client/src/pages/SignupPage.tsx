@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Mail, Lock, Eye, EyeOff, User } from "lucide-react"
 import { useState } from "react"
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth"
 import { useQueryClient } from "@tanstack/react-query"
 
@@ -97,6 +98,16 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <Helmet>
+        <title>Sign Up - Create Your RepairRequest Account</title>
+        <meta name="description" content="Create your free RepairRequest account to start managing maintenance requests, work orders, and facility operations. Sign up in seconds." />
+        <link rel="canonical" href="https://www.repairrequest.org/signup" />
+        <meta property="og:title" content="Sign Up for RepairRequest" />
+        <meta property="og:description" content="Create your free account and start streamlining facility maintenance today." />
+        <meta property="og:url" content="https://www.repairrequest.org/signup" />
+        <meta name="twitter:title" content="Sign Up for RepairRequest" />
+        <meta name="twitter:description" content="Create your free account for facilities management." />
+      </Helmet>
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-5xl w-full flex">
         {/* Left Panel - Signup Form */}
         <div className="w-full lg:w-1/2 p-8 lg:p-12">

@@ -17,8 +17,12 @@ export default function FAQ() {
       <Helmet>
         <title>FAQ - RepairRequest Facilities Management Questions</title>
         <meta name="description" content="Get answers to frequently asked questions about RepairRequest facilities management software, implementation, pricing, support, and features." />
+        <link rel="canonical" href="https://www.repairrequest.org/faq" />
         <meta property="og:title" content="RepairRequest FAQ - Common Questions Answered" />
         <meta property="og:description" content="Find answers to common questions about our facilities management platform, from setup to advanced features." />
+        <meta property="og:url" content="https://www.repairrequest.org/faq" />
+        <meta name="twitter:title" content="RepairRequest FAQ" />
+        <meta name="twitter:description" content="Answers to common questions about facilities management." />
       </Helmet>
 
       <PublicHeader currentPage="faq" />

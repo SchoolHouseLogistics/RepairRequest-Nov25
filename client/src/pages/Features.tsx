@@ -19,8 +19,12 @@ export default function Features() {
       <Helmet>
         <title>Features - RepairRequest Facilities Management Platform</title>
         <meta name="description" content="Discover RepairRequest's powerful features: photo uploads, real-time messaging, role-based access, mobile-first design, and comprehensive reporting for facilities management." />
+        <link rel="canonical" href="https://www.repairrequest.org/features" />
         <meta property="og:title" content="RepairRequest Features - Complete Facilities Management" />
         <meta property="og:description" content="Explore comprehensive features for property & facility management across all industries including digital workflows, real-time communication, and detailed analytics." />
+        <meta property="og:url" content="https://www.repairrequest.org/features" />
+        <meta name="twitter:title" content="RepairRequest Features" />
+        <meta name="twitter:description" content="Powerful features for comprehensive facility management." />
       </Helmet>
       
       <PublicHeader currentPage="features" />

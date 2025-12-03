@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
+import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CalendlyWidget from "@/components/CalendlyWidget";
@@ -14,8 +15,18 @@ import CalendlyWidget from "@/components/CalendlyWidget";
 export default function About() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Helmet>
+        <title>About Us - RepairRequest by SchoolHouse Logistics</title>
+        <meta name="description" content="Learn about RepairRequest and SchoolHouse Logistics. We're revolutionizing facilities management for schools, businesses, and organizations worldwide." />
+        <link rel="canonical" href="https://www.repairrequest.org/about" />
+        <meta property="og:title" content="About RepairRequest - Our Mission & Story" />
+        <meta property="og:description" content="Discover how RepairRequest is transforming facility management for organizations of all sizes." />
+        <meta property="og:url" content="https://www.repairrequest.org/about" />
+        <meta name="twitter:title" content="About RepairRequest" />
+        <meta name="twitter:description" content="Learn about our mission to revolutionize facilities management." />
+      </Helmet>
       
-      <PublicHeader currentPage="" />
+      <PublicHeader currentPage="about" />
 
       {/* Promotional Banner */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">

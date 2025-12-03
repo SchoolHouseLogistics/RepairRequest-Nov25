@@ -3,11 +3,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 
 export default function HeroLanding() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Helmet>
+        <title>RepairRequest - Work Order & Maintenance Management</title>
+        <meta name="description" content="Transform your maintenance operations with RepairRequest. Easy request submission, automated workflows, and real-time tracking for schools, businesses, and organizations." />
+        <link rel="canonical" href="https://www.repairrequest.org/landing" />
+        <meta property="og:title" content="RepairRequest - Maintenance Management Made Simple" />
+        <meta property="og:description" content="Streamline work requests, assign tasks, and track progress in one platform." />
+        <meta property="og:url" content="https://www.repairrequest.org/landing" />
+        <meta name="twitter:title" content="RepairRequest - Maintenance Management" />
+        <meta name="twitter:description" content="Streamline work requests and maintenance operations." />
+      </Helmet>
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

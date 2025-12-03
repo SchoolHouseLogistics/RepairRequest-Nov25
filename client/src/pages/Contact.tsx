@@ -7,6 +7,7 @@ import { MapPin, Mail, Phone, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
+import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
@@ -15,8 +16,18 @@ import CalendlyWidget from "@/components/CalendlyWidget";
 export default function Contact() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Helmet>
+        <title>Contact Us - RepairRequest Sales & Support</title>
+        <meta name="description" content="Contact RepairRequest for sales inquiries, demos, or support. Reach our team via email, phone, or schedule a personalized consultation." />
+        <link rel="canonical" href="https://www.repairrequest.org/contact" />
+        <meta property="og:title" content="Contact RepairRequest - Get in Touch" />
+        <meta property="og:description" content="Ready to transform your maintenance management? Contact us for a demo or to discuss your facility needs." />
+        <meta property="og:url" content="https://www.repairrequest.org/contact" />
+        <meta name="twitter:title" content="Contact RepairRequest" />
+        <meta name="twitter:description" content="Get in touch with our sales and support team." />
+      </Helmet>
       
-      <PublicHeader currentPage="" />
+      <PublicHeader currentPage="contact" />
 
       {/* Promotional Banner */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">

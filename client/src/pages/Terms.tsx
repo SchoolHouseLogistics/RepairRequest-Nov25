@@ -6,12 +6,23 @@ import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
+import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 
 export default function Terms() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Helmet>
+        <title>Terms of Service - RepairRequest User Agreement</title>
+        <meta name="description" content="RepairRequest terms of service and user agreement. Read the terms and conditions for using our facilities management platform and services." />
+        <link rel="canonical" href="https://www.repairrequest.org/terms" />
+        <meta property="og:title" content="RepairRequest Terms of Service" />
+        <meta property="og:description" content="Terms and conditions for using RepairRequest platform." />
+        <meta property="og:url" content="https://www.repairrequest.org/terms" />
+        <meta name="twitter:title" content="RepairRequest Terms of Service" />
+        <meta name="twitter:description" content="Read our terms and conditions." />
+      </Helmet>
       
       <PublicHeader currentPage="" />
 

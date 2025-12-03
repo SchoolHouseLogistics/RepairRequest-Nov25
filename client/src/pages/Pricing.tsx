@@ -18,8 +18,12 @@ export default function Pricing() {
       <Helmet>
         <title>Pricing - RepairRequest Facilities Management Plans</title>
         <meta name="description" content="Simple, predictable pricing for RepairRequest facilities management. Professional plans from $1,000-$12,000/year based on organization size. Enterprise custom quotes available." />
+        <link rel="canonical" href="https://www.repairrequest.org/pricing" />
         <meta property="og:title" content="RepairRequest Pricing - Transparent Facilities Management" />
         <meta property="og:description" content="No hidden fees. Transparent pricing for comprehensive facility management software based on your organization size." />
+        <meta property="og:url" content="https://www.repairrequest.org/pricing" />
+        <meta name="twitter:title" content="RepairRequest Pricing" />
+        <meta name="twitter:description" content="Simple, transparent pricing for facilities management." />
       </Helmet>
       
       <PublicHeader currentPage="pricing" />

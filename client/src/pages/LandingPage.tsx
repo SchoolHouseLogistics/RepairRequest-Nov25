@@ -20,9 +20,13 @@ export default function LandingPage() {
       <Helmet>
         <title>RepairRequest - Property & Facilities Management Software</title>
         <meta name="description" content="Comprehensive facilities management software for schools, commercial buildings, residential communities & property managers. Streamline maintenance requests, scheduling & operations. Free 30-day trial." />
+        <link rel="canonical" href="https://www.repairrequest.org/" />
         <meta property="og:title" content="RepairRequest - Facilities Management Software" />
         <meta property="og:description" content="Transform facility management across all industries with our comprehensive platform for maintenance requests, scheduling, and operations. Trusted by schools, commercial & residential properties." />
         <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://www.repairrequest.org/" />
+        <meta name="twitter:title" content="RepairRequest - Facilities Management Software" />
+        <meta name="twitter:description" content="Comprehensive facilities management for all organizations." />
       </Helmet>
       
       <PublicHeader currentPage="home" />
