@@ -209,126 +209,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const passport = await import('passport')
 
   // OAuth callback handler that bypasses middleware conflicts
-  // app.get("/api/auth/callback/google", async (req, res) => {
-  //   console.log("=== PRIORITY OAUTH CALLBACK HANDLER ===");
-  //   console.log("Query params:", req.query);
+  app.get("/api/auth/callback/google", async (req, res) => {
+    try {
+      // Check for OAuth errors from Google
+      if (req.query.error) {
+        return res.redirect("/?error=oauth_error");
+      }
 
-  //   try {
-  //     // Check for OAuth errors from Google
-  //     if (req.query.error) {
-  //       console.error("Google OAuth error:", req.query.error);
-  //       return res.redirect("/?error=oauth_error");
-  //     }
+      // Check for authorization code
+      if (!req.query.code) {
+        return res.redirect("/?error=no_code");
+      }
 
-  //     // Check for authorization code
-  //     if (!req.query.code) {
-  //       console.error("No authorization code received");
-  //       return res.redirect("/?error=no_code");
-  //     }
+      // Exchange authorization code for access token
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code: req.query.code as string,
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          redirect_uri: `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`,
+          grant_type: 'authorization_code',
+        }),
+      });
 
-  //     console.log("Processing OAuth callback with code:", (req.query.code as string).substring(0, 10) + "...");
+      const tokenData = await tokenResponse.json();
 
-  //     // Exchange authorization code for access token
-  //     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/x-www-form-urlencoded',
-  //       },
-  //       body: new URLSearchParams({
-  //         code: req.query.code as string,
-  //         client_id: process.env.GOOGLE_CLIENT_ID!,
-  //         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-  //         redirect_uri: `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`,
-  //         grant_type: 'authorization_code',
-  //       }),
-  //     });
+      if (!tokenData.access_token) {
+        return res.redirect("/?error=token_failed");
+      }
 
-  //     const tokenData = await tokenResponse.json();
-  //     console.log("Token exchange result:", tokenData.access_token ? "SUCCESS" : "FAILED");
+      // Get user profile from Google
+      const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+        },
+      });
 
-  //     if (!tokenData.access_token) {
-  //       console.error("Failed to get access token:", tokenData);
-  //       return res.redirect("/?error=token_failed");
-  //     }
+      const profile = await profileResponse.json();
 
-  //     // Get user profile from Google
-  //     const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-  //       headers: {
-  //         'Authorization': `Bearer ${tokenData.access_token}`,
-  //       },
-  //     });
+      if (!profile.email) {
+        return res.redirect("/?error=no_email");
+      }
 
-  //     const profile = await profileResponse.json();
-  //     console.log("User profile received:", { id: profile.id, email: profile.email, name: profile.name });
+      // Find or create user
+      let user = await dbStorage.getUserByEmail(profile.email);
+      if (!user) {
+        // Create new user
+        const userData = {
+          id: profile.id,
+          email: profile.email,
+          firstName: profile.given_name || '',
+          lastName: profile.family_name || '',
+          role: 'requester',
+          organizationId: null,
+          profileImageUrl: profile.picture || null,
+        };
+        user = await dbStorage.createUser(userData as any);
+      }
 
-  //     if (!profile.email) {
-  //       console.error("No email in profile");
-  //       return res.redirect("/?error=no_email");
-  //     }
+      // Set session
+      req.session!.user = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        organizationId: user.organizationId,
+      };
 
-  //     // Check if user is allowed
-  //     const allowedEmails = ['jeffemail111@gmail.com', 'admin@example.com', 'maintenance@example.com'];
-  //     if (!allowedEmails.includes(profile.email)) {
-  //       console.log("Email not in allowed list:", profile.email);
-  //       return res.redirect("/?error=not_authorized");
-  //     }
+      res.redirect("/dashboard");
 
-  //     // Find or create user
-  //     let user = await dbStorage.getUserByEmail(profile.email);
-  //     if (!user) {
-  //       // Create new user
-  //       const userData = {
-  //         id: profile.id,
-  //         email: profile.email,
-  //         name: profile.name,
-  //         role: profile.email === 'jeffemail111@gmail.com' ? 'admin' : 'requester',
-  //         organizationId: 1, // Default organization
-  //       };
-  //       user = await dbStorage.upsertUser(userData);
-  //       console.log("Created new user:", user);
-  //     } else {
-  //       console.log("Found existing user:", user);
-  //     }
-
-  //     // Log in the user
-  //     req.logIn(user, (err) => {
-  //       if (err) {
-  //         console.error("Login failed:", err);
-  //         return res.redirect("/?error=login_failed");
-  //       }
-
-  //       console.log("User successfully logged in:", user.email);
-
-  //       // Redirect to dashboard
-  //       return res.redirect("/dashboard");
-  //     });
-
-  //   } catch (error) {
-  //     console.error("OAuth callback error:", error);
-  //     return res.redirect("/?error=callback_failed");
-  //   }
-  // });
+    } catch (error) {
+      return res.redirect("/?error=callback_failed");
+    }
+  });
 
   // Login route with priority registration
-  // app.get("/api/login", (req, res) => {
-  //   console.log("=== PRIORITY LOGIN HANDLER ===");
-  //   console.log("Redirecting to Google OAuth");
+  app.get("/api/login", (req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const redirectUri = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`;
+    const scope = "profile email";
+    const state = req.sessionID;
 
-  //   const clientId = process.env.GOOGLE_CLIENT_ID;
-  //   const redirectUri = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`;
-  //   const scope = "profile email";
-  //   const state = req.sessionID;
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `response_type=code&` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `state=${state}`;
 
-  //   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-  //     `response_type=code&` +
-  //     `client_id=${clientId}&` +
-  //     `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-  //     `scope=${encodeURIComponent(scope)}&` +
-  //     `state=${state}`;
-
-  //   console.log("Google OAuth URL:", googleAuthUrl.substring(0, 100) + "...");
-  //   res.redirect(googleAuthUrl);
-  // });
+    res.redirect(googleAuthUrl);
+  });
 
   // PRIORITY ROUTES: Register before Vite middleware to avoid conflicts
 
