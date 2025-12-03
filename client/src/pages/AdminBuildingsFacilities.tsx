@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Edit, Building, Wrench, X } from "lucide-react";
+import { Trash2, Plus, Edit, Building, Wrench, X, Upload, ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -179,6 +179,55 @@ export default function AdminBuildingsFacilities() {
       refetchFacilities();
     },
   });
+
+  // Building image upload mutation
+  const uploadBuildingImageMutation = useMutation({
+    mutationFn: async ({ buildingId, file }: { buildingId: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const response = await fetch(`/api/admin/buildings/${buildingId}/image`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Building image uploaded successfully" });
+      refetchBuildings();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to upload image", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteBuildingImageMutation = useMutation({
+    mutationFn: (buildingId: number) => 
+      apiRequest("DELETE", `/api/admin/buildings/${buildingId}/image`),
+    onSuccess: () => {
+      toast({ title: "Building image removed" });
+      refetchBuildings();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to remove image", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleImageUpload = (buildingId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      uploadBuildingImageMutation.mutate({ buildingId, file });
+      // Reset input so same file can be selected again
+      event.target.value = '';
+    }
+  };
 
   const handleCreateBuilding = (data: BuildingFormValues) => {
     createBuildingMutation.mutate(data);
@@ -407,44 +456,100 @@ export default function AdminBuildingsFacilities() {
                   </p>
                 ) : (
                   buildings?.map((building: any) => (
-                    <div key={building.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{building.name}</h3>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditBuilding(building)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteBuildingMutation.mutate(building.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                    <div key={building.id} className="border rounded-lg overflow-hidden" data-testid={`building-card-${building.id}`}>
+                      {/* Building Image Section */}
+                      <div className="relative h-32 bg-gray-100">
+                        {building.imageUrl ? (
+                          <>
+                            <img 
+                              src={building.imageUrl} 
+                              alt={building.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => deleteBuildingImageMutation.mutate(building.id)}
+                              data-testid={`button-remove-image-${building.id}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                            <ImageIcon className="h-8 w-8 mb-2" />
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleImageUpload(building.id, e)}
+                                data-testid={`input-upload-image-${building.id}`}
+                              />
+                              <span className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                                <Upload className="h-4 w-4" />
+                                Upload Photo
+                              </span>
+                            </label>
+                          </div>
+                        )}
                       </div>
-                      {building.address && (
-                        <p className="text-sm text-gray-600 mb-2">{building.address}</p>
-                      )}
-                      {building.description && (
-                        <p className="text-sm text-gray-600 mb-2">{building.description}</p>
-                      )}
-                      {building.roomNumbers && building.roomNumbers.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium mb-2">Rooms:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {building.roomNumbers.map((room: string, index: number) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {room}
-                              </Badge>
-                            ))}
+                      
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold">{building.name}</h3>
+                          <div className="flex gap-2">
+                            {building.imageUrl && (
+                              <label className="cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => handleImageUpload(building.id, e)}
+                                />
+                                <Button variant="outline" size="sm" asChild>
+                                  <span><Upload className="h-4 w-4" /></span>
+                                </Button>
+                              </label>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditBuilding(building)}
+                              data-testid={`button-edit-building-${building.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => deleteBuildingMutation.mutate(building.id)}
+                              data-testid={`button-delete-building-${building.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                      )}
+                        {building.address && (
+                          <p className="text-sm text-gray-600 mb-2">{building.address}</p>
+                        )}
+                        {building.description && (
+                          <p className="text-sm text-gray-600 mb-2">{building.description}</p>
+                        )}
+                        {building.roomNumbers && building.roomNumbers.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">Rooms:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {building.roomNumbers.map((room: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {room}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}

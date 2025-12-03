@@ -23,6 +23,10 @@ export default function Dashboard() {
     queryKey: ["/api/requests/assigned"],
     enabled: user?.role === 'maintenance',
   });
+
+  const { data: buildingsData, isLoading: isLoadingBuildings } = useQuery({
+    queryKey: ["/api/buildings"],
+  });
   
   return (
     <div className="py-6">
@@ -294,31 +298,42 @@ export default function Dashboard() {
           </div>
         )}
         
-        {/* Campus Facilities */}
+        {/* Facilities */}
         <div className="mt-8">
-          <h2 className="text-lg font-heading font-medium text-gray-900">Campus Facilities</h2>
-          <div className="mt-4 grid gap-6 grid-cols-1 md:grid-cols-2">
-            <div className="relative rounded-lg overflow-hidden h-48 shadow-md">
-              <img 
-                src="/attached_assets/2024-09-03_1750801709551.webp" 
-                alt="Canterbury Upper School" 
-                className="w-full h-full object-cover" 
-              />
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
-                <h3 className="text-white font-heading font-medium">Upper School</h3>
+          <h2 className="text-lg font-heading font-medium text-gray-900">Facilities</h2>
+          <div className="mt-4 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {isLoadingBuildings ? (
+              <>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="animate-pulse h-48 bg-gray-200 rounded-lg"></div>
+                ))}
+              </>
+            ) : buildingsData && buildingsData.length > 0 ? (
+              buildingsData.slice(0, 6).map((building: any) => (
+                <div key={building.id} className="relative rounded-lg overflow-hidden h-48 shadow-md" data-testid={`card-building-${building.id}`}>
+                  {building.imageUrl ? (
+                    <img 
+                      src={building.imageUrl} 
+                      alt={building.name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                      <svg className="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                      </svg>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
+                    <h3 className="text-white font-heading font-medium">{building.name}</h3>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-500">No facilities found</p>
               </div>
-            </div>
-            
-            <div className="relative rounded-lg overflow-hidden h-48 shadow-md">
-              <img 
-                src="/attached_assets/lower school_1750801746691.jpg" 
-                alt="Canterbury Lower School" 
-                className="w-full h-full object-cover" 
-              />
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
-                <h3 className="text-white font-heading font-medium">Lower School</h3>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -1926,6 +1926,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload building image (super admin only)
+  app.post("/api/admin/buildings/:id/image", authMiddleware, (req: any, res) => {
+    upload.single('image')(req, res, async (err: any) => {
+      if (err) {
+        console.error("Building image upload error:", err);
+        return res.status(400).json({ message: err.message || "Upload failed" });
+      }
+
+      try {
+        const userId = req.user.id;
+        const user = await dbStorage.getUser(userId);
+
+        if (user?.role !== 'super_admin') {
+          return res.status(403).json({ message: "Super admin access required" });
+        }
+
+        const buildingId = parseInt(req.params.id);
+        
+        if (!req.file) {
+          return res.status(400).json({ message: "No image file provided" });
+        }
+
+        // Update building with the new image URL
+        const imageUrl = `/uploads/photos/${req.file.filename}`;
+        const building = await dbStorage.updateBuilding(buildingId, { imageUrl });
+
+        res.json({ 
+          success: true, 
+          imageUrl,
+          building: {
+            ...building,
+            roomNumbers: building.roomNumbers ?? [],
+          }
+        });
+      } catch (error) {
+        console.error("Error uploading building image:", error);
+        res.status(500).json({ message: "Failed to upload building image" });
+      }
+    });
+  });
+
+  // Delete building image (super admin only)
+  app.delete("/api/admin/buildings/:id/image", authMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await dbStorage.getUser(userId);
+
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: "Super admin access required" });
+      }
+
+      const buildingId = parseInt(req.params.id);
+      const building = await dbStorage.updateBuilding(buildingId, { imageUrl: null });
+
+      res.json({ 
+        success: true, 
+        building: {
+          ...building,
+          roomNumbers: building.roomNumbers ?? [],
+        }
+      });
+    } catch (error) {
+      console.error("Error removing building image:", error);
+      res.status(500).json({ message: "Failed to remove building image" });
+    }
+  });
+
   // Get facilities for a specific organization (super admin only)
   app.get("/api/admin/facilities/:orgId", authMiddleware, async (req: any, res) => {
     try {
