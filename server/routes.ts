@@ -221,6 +221,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/?error=no_code");
       }
 
+      // Get redirect URI using same logic as login route
+      const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
+      const protocol = req.get('x-forwarded-proto') || 'https';
+      const redirectUri = `${protocol}://${host}/api/auth/callback/google`;
+
       // Exchange authorization code for access token
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -231,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           code: req.query.code as string,
           client_id: process.env.GOOGLE_CLIENT_ID!,
           client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          redirect_uri: `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`,
+          redirect_uri: redirectUri,
           grant_type: 'authorization_code',
         }),
       });
@@ -288,10 +293,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper to get the correct host for OAuth redirect
+  const getOAuthRedirectUri = (req: any) => {
+    // Use the request host to support both dev and production domains
+    const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
+    const protocol = req.get('x-forwarded-proto') || 'https';
+    return `${protocol}://${host}/api/auth/callback/google`;
+  };
+
   // Login route with priority registration
   app.get("/api/login", (req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`;
+    const redirectUri = getOAuthRedirectUri(req);
     const scope = "profile email";
     const state = req.sessionID;
 
@@ -308,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Alias route for /api/auth/google (some pages use this URL)
   app.get("/api/auth/google", (req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/api/auth/callback/google`;
+    const redirectUri = getOAuthRedirectUri(req);
     const scope = "profile email";
     const state = req.sessionID;
 
