@@ -93,7 +93,7 @@ export default function Support() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">Speak directly with our support team</p>
-                <p className="font-semibold">1-800-REPAIR-1</p>
+                <p className="font-semibold">(407) 494-5230</p>
                 <p className="text-sm text-gray-500">Mon-Fri, 9AM-6PM EST</p>
               </CardContent>
             </Card>

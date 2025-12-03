@@ -249,8 +249,8 @@ export default function Privacy() {
                   If you have any questions about this privacy policy or our privacy practices, please contact us at:
                 </p>
                 <div className="mt-4 text-gray-600">
-                  <p>Email: privacy@schoolhouselogistics.com</p>
-                  <p>Address: SchoolHouse Logistics, 123 Business Drive, Suite 100, Fort Myers, FL 33901</p>
+                  <p>Email: info@schoolhouselogistics.com</p>
+                  <p>Phone: (407) 494-5230</p>
                 </div>
               </CardContent>
             </Card>

@@ -126,6 +126,11 @@ Changelog:
 - June 28, 2025: Fixed routing issue where building requests bypassed photo-enabled endpoint (/api/building-requests)
 - June 28, 2025: Implemented comprehensive photo recovery utility to restore missing photo references
 - June 28, 2025: Verified photo upload system working end-to-end with proper file persistence and database integration
+- December 3, 2025: New users now automatically assigned to New School (org ID 2) as requesters on signup
+- December 3, 2025: Removed addresses from all pages (Privacy, Terms, Contact)
+- December 3, 2025: Updated contact info across site: email info@schoolhouselogistics.com, phone (407) 494-5230
+- December 3, 2025: Created Accessibility page with WCAG 2.1 Level AA compliance statement
+- December 3, 2025: Updated Legal section in footer to include Privacy Policy, Terms of Service, and Accessibility
 ```
 
 ## User Preferences

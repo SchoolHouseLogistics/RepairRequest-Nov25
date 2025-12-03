@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MapPin, Mail, Phone, Clock } from "lucide-react";
+import { Mail, Phone, Clock, MonitorPlay } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -80,24 +80,10 @@ export default function Contact() {
               
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
-                  <MapPin className="h-6 w-6 text-blue-600 mt-1" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Office Address</h3>
-                    <p className="text-gray-600">
-                      SchoolHouse Logistics<br />
-                      123 Business Drive<br />
-                      Suite 100<br />
-                      Fort Myers, FL 33901
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
                   <Mail className="h-6 w-6 text-blue-600 mt-1" />
                   <div>
                     <h3 className="font-semibold text-gray-900">Email</h3>
                     <p className="text-gray-600">info@schoolhouselogistics.com</p>
-                    <p className="text-gray-600">support@schoolhouselogistics.com</p>
                   </div>
                 </div>
 
@@ -105,8 +91,7 @@ export default function Contact() {
                   <Phone className="h-6 w-6 text-blue-600 mt-1" />
                   <div>
                     <h3 className="font-semibold text-gray-900">Phone</h3>
-                    <p className="text-gray-600">Sales: 1-800-REPAIR-1</p>
-                    <p className="text-gray-600">Support: 1-800-REPAIR-2</p>
+                    <p className="text-gray-600">(407) 494-5230</p>
                   </div>
                 </div>
 
@@ -251,7 +236,7 @@ export default function Contact() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MapPin className="h-8 w-8 text-green-600" />
+                    <MonitorPlay className="h-8 w-8 text-green-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Live Demo</h3>
                   <p className="text-gray-600 text-sm">

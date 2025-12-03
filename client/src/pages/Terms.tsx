@@ -306,9 +306,8 @@ export default function Terms() {
                   If you have any questions about these Terms of Service, please contact us at:
                 </p>
                 <div className="mt-4 text-gray-600">
-                  <p>Email: legal@schoolhouselogistics.com</p>
-                  <p>Address: SchoolHouse Logistics, 123 Business Drive, Suite 100, Fort Myers, FL 33901</p>
-                  <p>Phone: 1-800-REPAIR-1</p>
+                  <p>Email: info@schoolhouselogistics.com</p>
+                  <p>Phone: (407) 494-5230</p>
                 </div>
               </CardContent>
             </Card>
