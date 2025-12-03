@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,10 @@ export default function RequestForm() {
   const today = new Date().toISOString().split('T')[0];
   return (
     <div className="py-6">
+      <Helmet>
+        <title>New Facility Request - RepairRequest</title>
+        <meta name="description" content="Submit a new facility or event request. Specify dates, times, equipment needs, and priority level." />
+      </Helmet>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center">
           <Button variant="ghost" className="mr-3 text-primary p-2" onClick={() => navigate("/")}>

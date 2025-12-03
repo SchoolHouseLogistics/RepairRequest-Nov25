@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -47,6 +48,9 @@ export default function Reports() {
   if (isLoadingAuth || isLoading) {
     return (
       <div className="py-6">
+        <Helmet>
+          <title>Reports - RepairRequest</title>
+        </Helmet>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="animate-pulse h-8 w-64 bg-gray-200 rounded mb-6"></div>
           <div className="animate-pulse h-96 bg-gray-200 rounded"></div>

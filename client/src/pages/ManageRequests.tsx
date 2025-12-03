@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -69,6 +70,10 @@ export default function ManageRequests() {
   
   return (
     <div className="py-6">
+      <Helmet>
+        <title>Manage Requests - RepairRequest</title>
+        <meta name="description" content="View and manage all maintenance and facility requests. Filter by status, assign staff, and track progress." />
+      </Helmet>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <h1 className="text-2xl font-heading font-bold text-gray-900 mb-6">
           {isSuperAdmin ? "Manage Organization Requests" : "Manage All Requests"}

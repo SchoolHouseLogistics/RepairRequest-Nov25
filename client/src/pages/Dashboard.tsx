@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import StatsCard from "@/components/dashboard/StatsCard";
 import RequestCard from "@/components/requests/RequestCard";
@@ -30,6 +31,10 @@ export default function Dashboard() {
   
   return (
     <div className="py-6">
+      <Helmet>
+        <title>Dashboard - RepairRequest</title>
+        <meta name="description" content="View your facilities management dashboard with request statistics, recent activity, and quick access to maintenance operations." />
+      </Helmet>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <h1 className="text-2xl font-heading font-bold text-gray-900">Dashboard</h1>
         
