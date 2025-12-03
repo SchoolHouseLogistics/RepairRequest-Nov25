@@ -16,8 +16,6 @@ import RoomHistory from "@/pages/RoomHistory";
 import AdminOrganizations from "@/pages/AdminOrganizations";
 import AdminBuildingsFacilities from "@/pages/AdminBuildingsFacilities";
 import AdminUsers from "@/pages/AdminUsers";
-import LandingPage from "@/pages/LandingPage";
-import HeroLanding from "@/pages/HeroLanding";
 import Features from "@/pages/Features";
 import Pricing from "@/pages/Pricing";
 import Support from "@/pages/Support";
@@ -98,8 +96,7 @@ function AppContent() {
 
       <Routes>
         {/* Public routes - always available */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/landing" element={<HeroLanding />} />
+        <Route path="/" element={<LoginPage />} />
         <Route path="/features" element={<Features />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/faq" element={<FAQ />} />
