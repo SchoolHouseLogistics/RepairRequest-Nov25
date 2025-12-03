@@ -1,0 +1,99 @@
+You are working inside an existing production app called RepairRequest.
+This app is a maintenance and repair request management platform used by schools, property managers, businesses, and organizations.
+
+Your task:
+• Add and/or improve GLOBAL SEO metadata
+• Add PER-PAGE / PER-ROUTE SEO metadata
+• DO NOT change any existing functionality, routes, or styling
+• Only modify SEO-related files and components
+
+────────────────────────
+1. GLOBAL SEO (App-Level)
+────────────────────────
+Add or improve global meta tags in the root layout / index.html:
+
+- <title> fallback
+- meta description
+- meta keywords
+- canonical URL
+- robots tag
+- Open Graph defaults
+- Twitter card defaults
+
+Use RepairRequest as the primary brand name.
+
+Primary keywords:
+repair request app
+maintenance request software
+work order management system
+facility maintenance software
+school maintenance platform
+maintenance ticket system
+
+────────────────────────
+2. PAGE / ROUTE-LEVEL SEO (REQUIRED)
+────────────────────────
+Each of the following pages MUST have unique SEO tags:
+
+Examples (adapt based on actual routes):
+- Landing / Home
+- Login
+- Dashboard
+- Submit Repair Request
+- View Requests
+- Admin / Management page
+- Pricing (if exists)
+- About (if exists)
+
+For EACH page:
+- Unique <title> (≤ 60 characters)
+- Unique meta description (≤ 160 characters)
+- Canonical URL
+- Open Graph title & description
+- Twitter title & description
+
+Use keyword intent per page:
+- “Submit Repair Request” → service/action keywords
+- “Dashboard” → management & tracking keywords
+- “Admin” → workflow & reporting keywords
+
+Use React Helmet / Next.js metadata / framework-appropriate solution.
+
+────────────────────────
+3. STRUCTURED DATA (JSON-LD)
+────────────────────────
+Add JSON-LD structured data:
+
+A. SoftwareApplication
+- name: RepairRequest
+- description: Maintenance and repair request management software
+- applicationCategory: BusinessApplication
+- operatingSystem: Web
+- offers if applicable
+
+B. Organization
+- name: RepairRequest
+- parentOrganization: SchoolHouse Logistics (if applicable)
+- url
+- logo
+
+Inject structured data globally once.
+
+────────────────────────
+4. TECHNICAL REQUIREMENTS
+────────────────────────
+- Avoid duplicate meta tags
+- Ensure SPA routing updates SEO tags correctly
+- Use environment variables for base URL
+- No hardcoded localhost URLs
+- Support production + dev environments
+
+────────────────────────
+5. OUTPUT FORMAT
+────────────────────────
+Return:
+1. File names updated
+2. Exact code snippets added for:
+   - Global SEO
+   - Page-level SEO
+3. No explanations unless requested
