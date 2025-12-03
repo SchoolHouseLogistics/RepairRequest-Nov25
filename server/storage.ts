@@ -178,7 +178,18 @@ export class DatabaseStorage implements IStorage {
     console.log("Storage: getAllOrganizations called");
     try {
       const orgList = await db
-        .select()
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+          slug: organizations.slug,
+          domain: organizations.domain,
+          logoUrl: organizations.logoUrl,
+          settings: organizations.settings,
+          createdAt: organizations.createdAt,
+          updatedAt: organizations.updatedAt,
+          userCount: sql<number>`(SELECT COUNT(*) FROM users WHERE users.organization_id = organizations.id)`,
+          buildingCount: sql<number>`(SELECT COUNT(*) FROM buildings WHERE buildings.organization_id = organizations.id)`,
+        })
         .from(organizations)
         .orderBy(organizations.name);
       return orgList;
