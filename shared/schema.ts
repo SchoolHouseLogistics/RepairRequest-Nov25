@@ -61,6 +61,7 @@ export const buildings = pgTable("buildings", {
   name: varchar("name").notNull(),
   address: varchar("address"),
   description: text("description"),
+  imageUrl: varchar("image_url", { length: 500 }), // Uploaded building photo
   roomNumbers: text("room_numbers").array(), // Array of room numbers for this building
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
