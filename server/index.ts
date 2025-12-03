@@ -61,10 +61,11 @@ app.use(session({
   secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Trust the reverse proxy (needed for secure cookies behind proxy)
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax', // Must be 'lax' for OAuth redirects to work
     maxAge: 1000 * 60 * 60 * 24 // 24 hours
   }
 }));
