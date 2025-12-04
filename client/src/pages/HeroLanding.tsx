@@ -1,7 +1,22 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3 } from "lucide-react";
+import {
+  CheckCircle,
+  Users,
+  Clock,
+  Shield,
+  Mail,
+  Building2,
+  Settings,
+  BarChart3,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
@@ -11,29 +26,53 @@ export default function HeroLanding() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
         <title>RepairRequest - Work Order & Maintenance Management</title>
-        <meta name="description" content="Transform your maintenance operations with RepairRequest. Easy request submission, automated workflows, and real-time tracking for schools, businesses, and organizations." />
+        <meta
+          name="description"
+          content="Transform your maintenance operations with RepairRequest. Easy request submission, automated workflows, and real-time tracking for schools, businesses, and organizations."
+        />
         <link rel="canonical" href="https://www.repairrequest.org/landing" />
-        <meta property="og:title" content="RepairRequest - Maintenance Management Made Simple" />
-        <meta property="og:description" content="Streamline work requests, assign tasks, and track progress in one platform." />
-        <meta property="og:url" content="https://www.repairrequest.org/landing" />
-        <meta name="twitter:title" content="RepairRequest - Maintenance Management" />
-        <meta name="twitter:description" content="Streamline work requests and maintenance operations." />
+        <meta
+          property="og:title"
+          content="RepairRequest - Maintenance Management Made Simple"
+        />
+        <meta
+          property="og:description"
+          content="Streamline work requests, assign tasks, and track progress in one platform."
+        />
+        <meta
+          property="og:url"
+          content="https://www.repairrequest.org/landing"
+        />
+        <meta
+          name="twitter:title"
+          content="RepairRequest - Maintenance Management"
+        />
+        <meta
+          name="twitter:description"
+          content="Streamline work requests and maintenance operations."
+        />
       </Helmet>
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <img src={logoPath} alt="RepairRequest Logo" className="w-10 h-10" />
+              <img
+                src={logoPath}
+                alt="RepairRequest Logo"
+                className="w-10 h-10"
+              />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">RepairRequest</h1>
-                <p className="text-sm text-gray-600">by SchoolHouse Logistics</p>
+                <h1 className="text-xl font-bold text-gray-900">
+                  RepairRequest
+                </h1>
+                <p className="text-sm text-gray-600">
+                  by SchoolHouse Logistics
+                </p>
               </div>
             </div>
             <Link to="/login">
-              <Button variant="outline">
-                Login to Portal
-              </Button>
+              <Button variant="outline">Login to Portal</Button>
             </Link>
           </div>
         </div>
@@ -49,7 +88,9 @@ export default function HeroLanding() {
             Streamline Maintenance & Work Requests for Your Entire Organization
           </h1>
           <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            RepairRequest gives businesses one simple platform to capture issues, assign tasks, track progress, and keep teams aligned—no matter what type of facilities you manage.
+            RepairRequest gives your business one simple platform to capture
+            issues, assign tasks, track progress, and keep teams aligned, no
+            matter what type of facilities you manage.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link to="/signup">
@@ -68,15 +109,22 @@ export default function HeroLanding() {
           <div className="space-y-4 max-w-2xl mx-auto">
             <div className="flex items-center justify-center space-x-3">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">Submit requests in seconds with photos, categories & priority</span>
+              <span className="text-lg text-gray-700">
+                Submit requests in seconds with photos, categories & priority
+              </span>
             </div>
             <div className="flex items-center justify-center space-x-3">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">Auto-assign tasks to the right team and track status in real time</span>
+              <span className="text-lg text-gray-700">
+                Auto-assign tasks to the right team and track status in real
+                time
+              </span>
             </div>
             <div className="flex items-center justify-center space-x-3">
               <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">Reduce downtime & keep operations running smoothly</span>
+              <span className="text-lg text-gray-700">
+                Reduce downtime & keep operations running smoothly
+              </span>
             </div>
           </div>
         </div>
@@ -90,7 +138,8 @@ export default function HeroLanding() {
               Why Choose RepairRequest?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Designed for property managers, facility teams, and organizations across all industries - from schools to commercial real estate.
+              Designed for property managers, facility teams, and organizations
+              across all industries : from schools to commercial real estate.
             </p>
           </div>
 
@@ -102,7 +151,8 @@ export default function HeroLanding() {
                 </div>
                 <CardTitle>Multi-Building Support</CardTitle>
                 <CardDescription>
-                  Manage maintenance across multiple buildings and facilities from a single platform.
+                  Manage maintenance across multiple buildings and facilities
+                  from a single platform.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -114,7 +164,8 @@ export default function HeroLanding() {
                 </div>
                 <CardTitle>Role-Based Access</CardTitle>
                 <CardDescription>
-                  Secure access controls for requesters, maintenance staff, and administrators.
+                  Secure access controls for requesters, maintenance staff, and
+                  administrators.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -126,7 +177,8 @@ export default function HeroLanding() {
                 </div>
                 <CardTitle>Real-Time Tracking</CardTitle>
                 <CardDescription>
-                  Track request status, assignments, and completion times in real-time.
+                  Track request status, assignments, and completion times in
+                  real-time.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -138,7 +190,8 @@ export default function HeroLanding() {
                 </div>
                 <CardTitle>Email Notifications</CardTitle>
                 <CardDescription>
-                  Automated email updates keep everyone informed throughout the repair process.
+                  Automated email updates keep everyone informed throughout the
+                  repair process.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -150,7 +203,8 @@ export default function HeroLanding() {
                 </div>
                 <CardTitle>Priority Management</CardTitle>
                 <CardDescription>
-                  Set and manage priority levels to ensure critical issues are addressed first.
+                  Set and manage priority levels to ensure critical issues are
+                  addressed first.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -162,7 +216,8 @@ export default function HeroLanding() {
                 </div>
                 <CardTitle>Analytics & Reporting</CardTitle>
                 <CardDescription>
-                  Comprehensive reporting tools to track performance and identify trends.
+                  Comprehensive reporting tools to track performance and
+                  identify trends.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -178,7 +233,8 @@ export default function HeroLanding() {
               Trusted Across Industries
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              RepairRequest serves diverse property management needs across multiple sectors
+              RepairRequest serves diverse property management needs across
+              multiple sectors
             </p>
           </div>
 
@@ -188,8 +244,12 @@ export default function HeroLanding() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Building2 className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Educational Institutions</h3>
-                <p className="text-gray-600 text-sm">Schools, universities, and educational facilities</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Educational Institutions
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Schools, universities, and educational facilities
+                </p>
               </CardContent>
             </Card>
 
@@ -198,8 +258,12 @@ export default function HeroLanding() {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <BarChart3 className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Commercial Real Estate</h3>
-                <p className="text-gray-600 text-sm">Office buildings, retail spaces, and commercial properties</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Commercial Real Estate
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Office buildings, retail spaces, and commercial properties
+                </p>
               </CardContent>
             </Card>
 
@@ -208,8 +272,12 @@ export default function HeroLanding() {
                 <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="h-8 w-8 text-purple-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Residential Communities</h3>
-                <p className="text-gray-600 text-sm">HOAs, apartment complexes, and residential properties</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Residential Communities
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  HOAs, apartment complexes, and residential properties
+                </p>
               </CardContent>
             </Card>
 
@@ -218,8 +286,12 @@ export default function HeroLanding() {
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="h-8 w-8 text-orange-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Property Management</h3>
-                <p className="text-gray-600 text-sm">Professional property management companies</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Property Management
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Professional property management companies
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -235,7 +307,9 @@ export default function HeroLanding() {
                 Built for Modern Property Management
               </h2>
               <p className="text-lg text-gray-600 mb-8">
-                RepairRequest understands the unique challenges of maintaining facilities across different industries. Our platform adapts to your specific needs while ensuring efficient operations.
+                RepairRequest understands the unique challenges of maintaining
+                facilities across different industries. Our platform adapts to
+                your specific needs while ensuring efficient operations.
               </p>
 
               <div className="space-y-4">
@@ -244,7 +318,7 @@ export default function HeroLanding() {
                   "Improve communication between staff and maintenance",
                   "Maintain detailed records for compliance and reporting",
                   "Streamline budget planning with comprehensive analytics",
-                  "Enhance safety through proactive maintenance tracking"
+                  "Enhance safety through proactive maintenance tracking",
                 ].map((benefit, index) => (
                   <div key={index} className="flex items-center space-x-3">
                     <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
@@ -255,12 +329,18 @@ export default function HeroLanding() {
             </div>
 
             <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-xl p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Ready to Get Started?</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                Ready to Get Started?
+              </h3>
               <p className="text-gray-600 mb-6">
-                Join organizations across industries already using RepairRequest to streamline their maintenance operations.
+                Join organizations across industries already using RepairRequest
+                to streamline their maintenance operations.
               </p>
               <Link to="/signup">
-                <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button
+                  size="lg"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
                   Access Your Portal
                 </Button>
               </Link>
@@ -278,39 +358,98 @@ export default function HeroLanding() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <img src={logoPath} alt="RepairRequest Logo" className="w-8 h-8" />
+                <img
+                  src={logoPath}
+                  alt="RepairRequest Logo"
+                  className="w-8 h-8"
+                />
                 <div>
                   <h3 className="text-lg font-bold">RepairRequest</h3>
-                  <p className="text-sm text-gray-400">by SchoolHouse Logistics</p>
+                  <p className="text-sm text-gray-400">
+                    by SchoolHouse Logistics
+                  </p>
                 </div>
               </div>
               <p className="text-gray-400">
-                Streamlining maintenance management for property managers and organizations across all industries.
+                Streamlining maintenance management for property managers and
+                organizations across all industries.
               </p>
             </div>
 
             <div>
               <h4 className="text-lg font-semibold mb-4">Platform</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/login" className="hover:text-white transition-colors">Portal Login</Link></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link to="/support" className="hover:text-white transition-colors">Support</Link></li>
+                <li>
+                  <Link
+                    to="/login"
+                    className="hover:text-white transition-colors"
+                  >
+                    Portal Login
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/pricing"
+                    className="hover:text-white transition-colors"
+                  >
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/support"
+                    className="hover:text-white transition-colors"
+                  >
+                    Support
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-lg font-semibold mb-4">Company</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link to="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
-                <li><Link to="/terms" className="hover:text-white transition-colors">Terms</Link></li>
+                <li>
+                  <Link
+                    to="/about"
+                    className="hover:text-white transition-colors"
+                  >
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/contact"
+                    className="hover:text-white transition-colors"
+                  >
+                    Contact
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/privacy"
+                    className="hover:text-white transition-colors"
+                  >
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/terms"
+                    className="hover:text-white transition-colors"
+                  >
+                    Terms
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 RepairRequest by SchoolHouse Logistics. All rights reserved.</p>
+            <p>
+              &copy; 2024 RepairRequest by SchoolHouse Logistics. All rights
+              reserved.
+            </p>
           </div>
         </div>
       </footer>
