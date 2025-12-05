@@ -81,6 +81,14 @@ export async function sendContactFormEmails(data: ContactFormData): Promise<{ su
   const results = { admin: false, customer: false };
 
   try {
+    console.log("[ZEPTOMAIL] Sending admin email with template:", ADMIN_TEMPLATE_KEY);
+    console.log("[ZEPTOMAIL] Admin email payload:", JSON.stringify({
+      template_key: ADMIN_TEMPLATE_KEY,
+      from: { address: FROM_EMAIL, name: "RepairRequest Contact Form" },
+      to: [{ email_address: { address: ADMIN_EMAIL, name: "RepairRequest Team" } }],
+      reply_to: [{ address: data.email, name: fullName }],
+    }, null, 2));
+    
     const adminResponse = await mailClient.sendMailWithTemplate({
       template_key: ADMIN_TEMPLATE_KEY,
       from: {
@@ -103,10 +111,14 @@ export async function sendContactFormEmails(data: ContactFormData): Promise<{ su
       ],
       merge_info: mergeInfo,
     });
-    console.log("Admin email sent successfully:", adminResponse);
+    console.log("[ZEPTOMAIL] Admin email sent successfully:", JSON.stringify(adminResponse, null, 2));
     results.admin = true;
-  } catch (error) {
-    console.error("Failed to send admin notification email:", error);
+  } catch (error: any) {
+    console.error("[ZEPTOMAIL] Failed to send admin notification email");
+    console.error("[ZEPTOMAIL] Error code:", error?.error?.code);
+    console.error("[ZEPTOMAIL] Error message:", error?.error?.message);
+    console.error("[ZEPTOMAIL] Error details:", JSON.stringify(error?.error?.details, null, 2));
+    console.error("[ZEPTOMAIL] Full error:", JSON.stringify(error, null, 2));
   }
 
   try {
