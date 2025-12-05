@@ -163,3 +163,38 @@ export async function sendContactFormEmails(data: ContactFormData): Promise<{ su
 export function isZeptoMailConfigured(): boolean {
   return !!(ZEPTOMAIL_API_KEY && ADMIN_TEMPLATE_KEY && CUSTOMER_TEMPLATE_KEY);
 }
+
+// Test function to send a simple email without template
+export async function sendTestEmail(toEmail: string): Promise<{ success: boolean; error?: string; response?: any }> {
+  const mailClient = getClient();
+  
+  if (!mailClient) {
+    return { success: false, error: "Email service not configured" };
+  }
+
+  try {
+    console.log("[ZEPTOMAIL TEST] Sending simple test email to:", toEmail);
+    const response = await mailClient.sendMail({
+      from: {
+        address: FROM_EMAIL,
+        name: "RepairRequest Test",
+      },
+      to: [
+        {
+          email_address: {
+            address: toEmail,
+            name: "Test Recipient",
+          },
+        },
+      ],
+      subject: "ZeptoMail Test - RepairRequest",
+      htmlbody: "<h1>Test Email</h1><p>This is a test email from RepairRequest to verify ZeptoMail delivery.</p><p>If you received this, the email service is working correctly!</p>",
+      textbody: "Test Email - This is a test email from RepairRequest to verify ZeptoMail delivery. If you received this, the email service is working correctly!",
+    });
+    console.log("[ZEPTOMAIL TEST] Response:", JSON.stringify(response, null, 2));
+    return { success: true, response };
+  } catch (error: any) {
+    console.error("[ZEPTOMAIL TEST] Error:", JSON.stringify(error, null, 2));
+    return { success: false, error: error?.error?.message || "Unknown error", response: error };
+  }
+}

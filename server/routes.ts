@@ -11,7 +11,7 @@ import z from "zod"
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { sendEmail } from "./emailService";
-import { sendContactFormEmails, isZeptoMailConfigured } from "./zeptoMailService";
+import { sendContactFormEmails, isZeptoMailConfigured, sendTestEmail } from "./zeptoMailService";
 
 // Extend session interface to include user property
 declare module "express-session" {
@@ -2720,6 +2720,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("[CONTACT] Error:", error);
       res.status(500).json({ error: "Failed to submit message" });
     }
+  });
+
+  // Test ZeptoMail simple email endpoint (for debugging)
+  app.post("/api/test-zeptomail", async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email address required" });
+    }
+    
+    console.log("[ZEPTOMAIL SIMPLE TEST] Testing simple email to:", email);
+    const result = await sendTestEmail(email);
+    console.log("[ZEPTOMAIL SIMPLE TEST] Result:", JSON.stringify(result, null, 2));
+    
+    res.json(result);
   });
 
   // Delete organization (super admin only)
