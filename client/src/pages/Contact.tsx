@@ -35,8 +35,9 @@ export default function Contact() {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.organization || !formData.message) {
       toast({
@@ -56,16 +57,12 @@ export default function Contact() {
         body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to submit form");
+        throw new Error(data.error || "Failed to submit form");
       }
 
-      setIsSubmitted(true);
-      toast({
-        title: "Message Sent",
-        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
-      });
-      
       setFormData({
         firstName: "",
         lastName: "",
@@ -76,10 +73,18 @@ export default function Contact() {
         inquiry: "",
         message: "",
       });
+      
+      setIsSubmitted(true);
+      
+      toast({
+        title: "Message Sent Successfully",
+        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+      });
     } catch (error) {
+      console.error("Contact form error:", error);
       toast({
         title: "Error",
-        description: "Failed to send message. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send message. Please try again.",
         variant: "destructive",
       });
     } finally {
