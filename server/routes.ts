@@ -8,7 +8,8 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import z from "zod"
-import AWS from 'aws-sdk';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { sendEmail } from "./emailService";
 import { sendContactFormEmails, isZeptoMailConfigured } from "./zeptoMailService";
 
@@ -82,7 +83,9 @@ const bulkSchema = z.array(
   })
 );
 
-const s3 = new AWS.S3();
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-1',
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -103,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Actually send the email
       const emailSent = await sendEmail({
         to: user.email,
-        from: process.env.SENDGRID_FROM_EMAIL || "no-reply@yourdomain.com",
+        from: process.env.FROM_EMAIL || "noreply@schoolhouselogistics.com",
         subject: "Password Reset Request",
         text: `Hello,\n\nYou requested a password reset. If this was you, click the link below to reset your password. If not, you can ignore this email.\n\n[Reset Link Here]`,
         html: `<p>Hello,</p><p>You requested a password reset. If this was you, click the link below to reset your password. If not, you can ignore this email.</p><p><a href='#'>Reset Password</a></p>`
@@ -2865,19 +2868,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  app.get('/get-presigned-url', (req, res) => {
-    const { key } = req.query; // the S3 key/path
+  app.get('/get-presigned-url', async (req, res) => {
+    const { key } = req.query;
 
-    const params = {
-      Bucket: 'repair-request-121905340783',
-      Key: key,
-      Expires: 60 * 5 // 5 minutes
-    };
+    if (!key || typeof key !== 'string') {
+      return res.status(400).json({ error: 'Key parameter is required' });
+    }
 
-    s3.getSignedUrl('getObject', params, (err, url) => {
-      if (err) return res.status(500).send(err);
+    try {
+      const command = new GetObjectCommand({
+        Bucket: 'repair-request-121905340783',
+        Key: key,
+      });
+
+      const url = await getSignedUrl(s3Client, command, { expiresIn: 300 });
       res.json({ url });
-    });
+    } catch (err) {
+      console.error('Error generating presigned URL:', err);
+      res.status(500).json({ error: 'Failed to generate presigned URL' });
+    }
   });
 
   const httpServer = createServer(app);
