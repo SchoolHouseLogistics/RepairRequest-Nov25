@@ -133,6 +133,10 @@ Changelog:
 - December 3, 2025: Created Data Security page with encryption and compliance information
 - December 3, 2025: Created Cookie Policy page explaining cookie usage and management
 - December 3, 2025: Updated Legal section in footer with all 5 pages: Privacy Policy, Terms of Service, Data Security, Cookie Policy, Accessibility
+- December 5, 2025: Fixed logout redirect to go to home page (/) instead of /landing
+- December 5, 2025: Integrated ZeptoMail for contact form emails with dual notifications (admin + customer confirmation)
+- December 5, 2025: Added organizationType field to contact form and database schema
+- December 5, 2025: Updated contact form with proper form handling, validation, and success state
 ```
 
 ## User Preferences
