@@ -26,9 +26,18 @@ function getClient() {
     return null;
   }
   if (!client) {
+    // Ensure the token has the correct format
+    // ZeptoMail expects: "Zoho-enczapikey YOUR_KEY" or just the key if already prefixed
+    let token = ZEPTOMAIL_API_KEY;
+    if (!token.startsWith("Zoho-enczapikey")) {
+      token = `Zoho-enczapikey ${token}`;
+    }
+    console.log("[ZEPTOMAIL] Token format check - starts with prefix:", token.startsWith("Zoho-enczapikey"));
+    console.log("[ZEPTOMAIL] Token length:", token.length);
+    
     client = new SendMailClient({
       url: "api.zeptomail.com/",
-      token: ZEPTOMAIL_API_KEY,
+      token: token,
     });
   }
   return client;
