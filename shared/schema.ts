@@ -193,6 +193,7 @@ export const contactMessages = pgTable("contact_messages", {
   email: varchar("email").notNull(),
   phone: varchar("phone"),
   organization: varchar("organization").notNull(),
+  organizationType: varchar("organization_type"),
   inquiry: varchar("inquiry"),
   message: text("message").notNull(),
   createdAt: timestamp("created_at").defaultNow(),

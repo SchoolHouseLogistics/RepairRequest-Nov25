@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, Clock, MonitorPlay } from "lucide-react";
+import { Mail, Phone, Clock, MonitorPlay, Loader2, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -12,8 +13,79 @@ import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import CalendlyWidget from "@/components/CalendlyWidget";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Contact() {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    organization: "",
+    organizationType: "",
+    inquiry: "",
+    message: "",
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.organization || !formData.message) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit form");
+      }
+
+      setIsSubmitted(true);
+      toast({
+        title: "Message Sent",
+        description: "Thank you for contacting us. We'll get back to you within 24 hours.",
+      });
+      
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        organization: "",
+        organizationType: "",
+        inquiry: "",
+        message: "",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
@@ -129,77 +201,150 @@ export default function Contact() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First Name *</Label>
-                        <Input id="firstName" placeholder="John" required />
+                  {isSubmitted ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">Message Sent Successfully</h3>
+                      <p className="text-gray-600 mb-4">
+                        Thank you for reaching out. We'll get back to you within 24 hours.
+                      </p>
+                      <Button 
+                        onClick={() => setIsSubmitted(false)}
+                        variant="outline"
+                        data-testid="button-send-another"
+                      >
+                        Send Another Message
+                      </Button>
+                    </div>
+                  ) : (
+                    <form className="space-y-4" onSubmit={handleSubmit}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="firstName">First Name *</Label>
+                          <Input 
+                            id="firstName" 
+                            placeholder="John" 
+                            value={formData.firstName}
+                            onChange={handleInputChange}
+                            required 
+                            data-testid="input-first-name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="lastName">Last Name *</Label>
+                          <Input 
+                            id="lastName" 
+                            placeholder="Doe" 
+                            value={formData.lastName}
+                            onChange={handleInputChange}
+                            required 
+                            data-testid="input-last-name"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <Label htmlFor="lastName">Last Name *</Label>
-                        <Input id="lastName" placeholder="Doe" required />
+                        <Label htmlFor="email">Email *</Label>
+                        <Input 
+                          id="email" 
+                          type="email" 
+                          placeholder="john@example.com" 
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          required 
+                          data-testid="input-email"
+                        />
                       </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input id="email" type="email" placeholder="john@example.com" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" type="tel" placeholder="(555) 123-4567" />
-                    </div>
-                    <div>
-                      <Label htmlFor="organization">Organization *</Label>
-                      <Input id="organization" placeholder="Your organization name" required />
-                    </div>
-                    <div>
-                      <Label htmlFor="organizationType">Organization Type *</Label>
-                      <select 
-                        id="organizationType"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        style={{color: 'hsl(25, 5.3%, 44.7%)'}}
-                        required
+                      <div>
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input 
+                          id="phone" 
+                          type="tel" 
+                          placeholder="(555) 123-4567" 
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          data-testid="input-phone"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="organization">Organization *</Label>
+                        <Input 
+                          id="organization" 
+                          placeholder="Your organization name" 
+                          value={formData.organization}
+                          onChange={handleInputChange}
+                          required 
+                          data-testid="input-organization"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="organizationType">Organization Type</Label>
+                        <select 
+                          id="organizationType"
+                          value={formData.organizationType}
+                          onChange={handleInputChange}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          data-testid="select-organization-type"
+                        >
+                          <option value="">Select an organization type</option>
+                          <option value="Education">Education</option>
+                          <option value="Commercial Real Estate">Commercial Real Estate</option>
+                          <option value="Residential Communities">Residential Communities</option>
+                          <option value="Healthcare">Healthcare</option>
+                          <option value="Government">Government</option>
+                          <option value="Hospitality">Hospitality</option>
+                          <option value="Manufacturing">Manufacturing</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="inquiry">Inquiry Type</Label>
+                        <select 
+                          id="inquiry"
+                          value={formData.inquiry}
+                          onChange={handleInputChange}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          data-testid="select-inquiry-type"
+                        >
+                          <option value="">Select an option</option>
+                          <option value="Sales Inquiry">Sales Inquiry</option>
+                          <option value="Request Demo">Request Demo</option>
+                          <option value="Technical Support">Technical Support</option>
+                          <option value="Partnership">Partnership</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="message">Message *</Label>
+                        <Textarea 
+                          id="message" 
+                          placeholder="Please describe how we can help you..."
+                          rows={5}
+                          value={formData.message}
+                          onChange={handleInputChange}
+                          required
+                          data-testid="textarea-message"
+                        />
+                      </div>
+                      <Button 
+                        type="submit"
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        disabled={isSubmitting}
+                        data-testid="button-submit-contact"
                       >
-                        <option value="">Select an organization type</option>
-                        <option value="education">Education</option>
-                        <option value="commercial-real-estate">Commercial Real Estate</option>
-                        <option value="residential-communities">Residential Communities</option>
-                        <option value="healthcare">Healthcare</option>
-                        <option value="government">Government</option>
-                        <option value="hospitality">Hospitality</option>
-                        <option value="manufacturing">Manufacturing</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="inquiry">Inquiry Type</Label>
-                      <select 
-                        id="inquiry"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Select an option</option>
-                        <option value="sales">Sales Inquiry</option>
-                        <option value="demo">Request Demo</option>
-                        <option value="support">Technical Support</option>
-                        <option value="partnership">Partnership</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea 
-                        id="message" 
-                        placeholder="Please describe how we can help you..."
-                        rows={5}
-                      />
-                    </div>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      Send Message
-                    </Button>
-                    <p className="text-sm text-gray-500 text-center">
-                      * Required fields
-                    </p>
-                  </form>
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          "Send Message"
+                        )}
+                      </Button>
+                      <p className="text-sm text-gray-500 text-center">
+                        * Required fields
+                      </p>
+                    </form>
+                  )}
                 </CardContent>
               </Card>
             </div>

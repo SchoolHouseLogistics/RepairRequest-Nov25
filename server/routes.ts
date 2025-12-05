@@ -10,6 +10,7 @@ import crypto from "crypto";
 import z from "zod"
 import AWS from 'aws-sdk';
 import { sendEmail } from "./emailService";
+import { sendContactFormEmails, isZeptoMailConfigured } from "./zeptoMailService";
 
 // Extend session interface to include user property
 declare module "express-session" {
@@ -2677,9 +2678,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: parsed.error.errors });
       }
       console.log("[CONTACT] Validation passed:", parsed.data);
+      
+      // Save to database
       const [created] = await db.insert(contactMessages).values(parsed.data).returning();
+      
+      // Send emails via ZeptoMail
+      if (isZeptoMailConfigured()) {
+        const emailResult = await sendContactFormEmails({
+          firstName: parsed.data.firstName,
+          lastName: parsed.data.lastName,
+          email: parsed.data.email,
+          phone: parsed.data.phone || undefined,
+          organization: parsed.data.organization,
+          organizationType: parsed.data.organizationType || undefined,
+          inquiry: parsed.data.inquiry || undefined,
+          message: parsed.data.message,
+        });
+        
+        if (!emailResult.success) {
+          console.error("[CONTACT] Email sending failed:", emailResult.error);
+        } else {
+          console.log("[CONTACT] Emails sent successfully");
+        }
+      } else {
+        console.log("[CONTACT] ZeptoMail not configured, skipping email notifications");
+      }
+      
       res.status(201).json({ success: true, message: "Message received", data: created });
     } catch (error) {
+      console.error("[CONTACT] Error:", error);
       res.status(500).json({ error: "Failed to submit message" });
     }
   });
