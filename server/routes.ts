@@ -2675,18 +2675,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Contact form submission endpoint
   app.post("/api/contact", async (req, res) => {
+    console.log("[CONTACT] ====== Contact form endpoint hit ======");
+    console.log("[CONTACT] Request body:", JSON.stringify(req.body, null, 2));
+    console.log("[CONTACT] isZeptoMailConfigured():", isZeptoMailConfigured());
+    
     try {
       const parsed = insertContactMessageSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.log("[CONTACT] Validation FAILED:", parsed.error.errors);
         return res.status(400).json({ error: "Invalid input", details: parsed.error.errors });
       }
-      console.log("[CONTACT] Validation passed:", parsed.data);
+      console.log("[CONTACT] Validation passed:", JSON.stringify(parsed.data, null, 2));
       
       // Save to database
       const [created] = await db.insert(contactMessages).values(parsed.data).returning();
+      console.log("[CONTACT] Saved to database, ID:", created.id);
       
       // Send emails via ZeptoMail
+      console.log("[CONTACT] Checking ZeptoMail config...");
       if (isZeptoMailConfigured()) {
+        console.log("[CONTACT] ZeptoMail IS configured, attempting to send emails...");
         const emailResult = await sendContactFormEmails({
           firstName: parsed.data.firstName,
           lastName: parsed.data.lastName,

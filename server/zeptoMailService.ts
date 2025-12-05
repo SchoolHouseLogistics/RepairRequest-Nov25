@@ -35,15 +35,22 @@ function getClient() {
 }
 
 export async function sendContactFormEmails(data: ContactFormData): Promise<{ success: boolean; error?: string }> {
+  console.log("[ZEPTOMAIL] sendContactFormEmails called with data:", JSON.stringify(data, null, 2));
+  console.log("[ZEPTOMAIL] Config check - API_KEY exists:", !!ZEPTOMAIL_API_KEY);
+  console.log("[ZEPTOMAIL] Config check - ADMIN_TEMPLATE_KEY exists:", !!ADMIN_TEMPLATE_KEY);
+  console.log("[ZEPTOMAIL] Config check - CUSTOMER_TEMPLATE_KEY exists:", !!CUSTOMER_TEMPLATE_KEY);
+  console.log("[ZEPTOMAIL] Config check - FROM_EMAIL:", FROM_EMAIL);
+  console.log("[ZEPTOMAIL] Config check - ADMIN_EMAIL:", ADMIN_EMAIL);
+  
   const mailClient = getClient();
   
   if (!mailClient) {
-    console.error("ZeptoMail client not available - API key not configured");
+    console.error("[ZEPTOMAIL] Client not available - API key not configured");
     return { success: false, error: "Email service not configured" };
   }
 
   if (!ADMIN_TEMPLATE_KEY || !CUSTOMER_TEMPLATE_KEY) {
-    console.error("ZeptoMail template keys not configured");
+    console.error("[ZEPTOMAIL] Template keys not configured");
     return { success: false, error: "Email templates not configured" };
   }
 
