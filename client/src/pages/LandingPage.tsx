@@ -1,18 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import luxuryCondoPath from "@assets/generated_images/Luxury_condo_building_exterior_4205c12c.png";
-import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CalendlyWidget from "@/components/CalendlyWidget";
+import ContactForm from "@/components/ContactForm";
 
 export default function LandingPage() {
   return (
@@ -341,49 +339,7 @@ export default function LandingPage() {
                 Ready to transform your operations? Send us a message and we'll get back to you promptly.
               </p>
               
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input placeholder="First Name *" required />
-                  </div>
-                  <div>
-                    <Input placeholder="Last Name *" required />
-                  </div>
-                </div>
-                <div>
-                  <Input type="email" placeholder="Email Address *" required />
-                </div>
-                <div>
-                  <Input placeholder="Organization/Company" />
-                </div>
-                <div>
-                  <select 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{color: 'hsl(25, 5.3%, 44.7%)'}}
-                    required
-                  >
-                    <option value="">Select organization type *</option>
-                    <option value="education">Education</option>
-                    <option value="commercial-real-estate">Commercial Real Estate</option>
-                    <option value="residential-communities">Residential Communities</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="government">Government</option>
-                    <option value="hospitality">Hospitality</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <Textarea 
-                    placeholder="Message" 
-                    rows={4}
-                  />
-                </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Message
-                </Button>
-              </form>
+              <ContactForm />
             </div>
           </div>
         </div>
@@ -391,8 +347,6 @@ export default function LandingPage() {
 
       <PublicFooter />
       <ScrollToTopButton />
-      
-      <ScrollToTop />
     </div>
   );
 }

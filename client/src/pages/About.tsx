@@ -1,16 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Target, Heart, Award, Calendar, Mail } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
-import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CalendlyWidget from "@/components/CalendlyWidget";
+import ContactForm from "@/components/ContactForm";
 
 export default function About() {
   return (
@@ -266,33 +264,7 @@ export default function About() {
                 Ready to transform your operations? Send us a message and we'll get back to you promptly.
               </p>
               
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Input placeholder="First Name *" required />
-                  </div>
-                  <div>
-                    <Input placeholder="Last Name *" required />
-                  </div>
-                </div>
-                <div>
-                  <Input type="email" placeholder="Email Address *" required />
-                </div>
-                <div>
-                  <Input placeholder="Organization/Company" />
-                </div>
-                <div>
-                  <Textarea 
-                    placeholder="Message *" 
-                    rows={4}
-                    required
-                  />
-                </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Message
-                </Button>
-              </form>
+              <ContactForm showOrganizationType={false} />
             </div>
           </div>
         </div>
@@ -300,7 +272,6 @@ export default function About() {
 
       <PublicFooter />
       <ScrollToTopButton />
-      <ScrollToTop />
     </div>
   );
 }
