@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Mail, Phone, Clock, MonitorPlay, Loader2, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
-import ScrollToTop from "@/components/ScrollToTop";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
@@ -39,7 +38,10 @@ export default function Contact() {
     e.preventDefault();
     e.stopPropagation();
     
+    console.log("[Contact Form] Submit triggered", formData);
+    
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.organization || !formData.message) {
+      console.log("[Contact Form] Validation failed - missing fields");
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields.",
@@ -49,6 +51,7 @@ export default function Contact() {
     }
 
     setIsSubmitting(true);
+    console.log("[Contact Form] Sending request to /api/contact");
     
     try {
       const response = await fetch("/api/contact", {
@@ -57,7 +60,9 @@ export default function Contact() {
         body: JSON.stringify(formData),
       });
 
+      console.log("[Contact Form] Response status:", response.status);
       const data = await response.json();
+      console.log("[Contact Form] Response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to submit form");
@@ -81,7 +86,7 @@ export default function Contact() {
         description: "Thank you for contacting us. We'll get back to you within 24 hours.",
       });
     } catch (error) {
-      console.error("Contact form error:", error);
+      console.error("[Contact Form] Error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to send message. Please try again.",
@@ -419,7 +424,6 @@ export default function Contact() {
 
       <PublicFooter />
       <ScrollToTopButton />
-      <ScrollToTop />
     </div>
   );
 }
