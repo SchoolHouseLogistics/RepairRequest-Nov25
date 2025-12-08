@@ -18,7 +18,7 @@ export default function ManageRequests() {
   
   // Redirect if not admin, maintenance, or super admin
   if (!isLoadingAuth && user && user.role !== 'admin' && user.role !== 'maintenance' && user.role !== 'super_admin') {
-    navigate("/");
+    navigate("/dashboard");
     return null;
   }
 

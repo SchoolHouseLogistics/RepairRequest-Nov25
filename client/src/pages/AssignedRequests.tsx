@@ -10,7 +10,7 @@ export default function AssignedRequests() {
   
   // Redirect if not admin or maintenance
   if (!isLoadingAuth && user && user.role !== 'admin' && user.role !== 'maintenance') {
-    navigate("/");
+    navigate("/dashboard");
     return null;
   }
   

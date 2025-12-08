@@ -88,7 +88,7 @@ export default function RoomHistory() {
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center">
-          <Button variant="ghost" className="mr-3 text-primary p-2" onClick={() => navigate("/")}>
+          <Button variant="ghost" className="mr-3 text-primary p-2" onClick={() => navigate("/dashboard")}>
             <ArrowLeft size={20} />
           </Button>
           <h1 className="text-2xl font-heading font-bold text-gray-900">Room Maintenance History</h1>

@@ -152,8 +152,8 @@ export default function BuildingRequestForm() {
       // Update any cached data
       queryClient.invalidateQueries({queryKey: ["/api/requests/my"]});
 
-      // Navigate back to home/dashboard
-      navigate("/");
+      // Navigate back to dashboard
+      navigate("/dashboard");
     } catch (error) {
       console.error("FORM SUBMIT - Error:", error);
       toast({
@@ -170,7 +170,7 @@ export default function BuildingRequestForm() {
     <div className="py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center">
-          <Button variant="ghost" className="mr-3 text-primary p-2" onClick={() => navigate("/")}>
+          <Button variant="ghost" className="mr-3 text-primary p-2" onClick={() => navigate("/dashboard")}>
             <ArrowLeft size={20} />
           </Button>
           <h1 className="text-2xl font-heading font-bold text-gray-900">New Building Repair Request</h1>
@@ -352,7 +352,7 @@ export default function BuildingRequestForm() {
                 <div className="flex justify-end space-x-4">
                   <Button 
                     variant="outline" 
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/dashboard")}
                     type="button"
                   >
                     Cancel

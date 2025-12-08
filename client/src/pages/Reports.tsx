@@ -31,7 +31,7 @@ export default function Reports() {
 
   // Redirect if not admin
   if (!isLoadingAuth && user && user.role !== 'admin') {
-    navigate("/");
+    navigate("/dashboard");
     return null;
   }
 
