@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, Clock, MessageCircle, Calendar } from "lucide-react";
+import { Mail, Phone, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -81,7 +81,7 @@ export default function Support() {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 mb-4">Get help via email with detailed responses</p>
-                <p className="font-semibold">support@schoolhouselogistics.com</p>
+                <p className="font-semibold">info@schoolhouselogistics.com</p>
                 <p className="text-sm text-gray-500">Response within 24 hours</p>
               </CardContent>
             </Card>
@@ -95,30 +95,6 @@ export default function Support() {
                 <p className="text-gray-600 mb-4">Speak directly with our support team</p>
                 <p className="font-semibold">(407) 494-5230</p>
                 <p className="text-sm text-gray-500">Mon-Fri, 9AM-6PM EST</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <MessageCircle className="h-12 w-12 mx-auto text-purple-600 mb-4" />
-                <CardTitle>Live Chat</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">Real-time assistance for urgent issues</p>
-                <p className="font-semibold">Available in portal</p>
-                <p className="text-sm text-gray-500">Mon-Fri, 8AM-8PM EST</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <Clock className="h-12 w-12 mx-auto text-orange-600 mb-4" />
-                <CardTitle>Priority Support</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">Faster response for Pro & Enterprise</p>
-                <p className="font-semibold">Dedicated representatives</p>
-                <p className="text-sm text-gray-500">Response within 4 hours</p>
               </CardContent>
             </Card>
           </div>
