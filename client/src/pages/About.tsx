@@ -174,66 +174,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Meet the Team
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              The dedicated professionals behind RepairRequest
-            </p>
-          </div>
-
-          <div className="max-w-4xl mx-auto text-center">
-            <Card className="border-0 shadow-lg">
-              <CardContent className="pt-8">
-                <div className="mb-6">
-                  <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-12 w-12 text-blue-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">SchoolHouse Logistics Team</h3>
-                  <p className="text-gray-600">Founded and Operated</p>
-                </div>
-                <p className="text-lg text-gray-600 mb-6">
-                  RepairRequest is proudly developed and maintained by the experienced team at SchoolHouse Logistics. 
-                  With years of experience in educational and commercial facility management, our team understands 
-                  the unique challenges organizations face in maintaining their properties.
-                </p>
-                <p className="text-gray-600">
-                  We combine deep industry knowledge with modern technology expertise to deliver solutions 
-                  that truly make a difference in how facilities are managed and maintained.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Transform Your Maintenance Operations?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join hundreds of organizations already using RepairRequest to streamline their facility management.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-50">
-                Get Started Today
-              </Button>
-            </Link>
-            <Link to="/contact">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
-                Contact Us
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* Contact and Calendly Section */}
       <section className="py-20 bg-gray-50">
