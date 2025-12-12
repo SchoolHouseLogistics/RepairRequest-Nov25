@@ -20,16 +20,91 @@ const requestFormSchema = z.object({
   requestType: z.literal("facilities"),
   facility: z.string().min(1, "Facility is required"),
   event: z.string().min(1, "Event title is required"),
-  eventDate: z.string().min(1, "Event date is required"),
+  eventDate: z.string().min(1, "Date reported is required"),
+  dateNeeded: z.string().min(1, "Date needed is required"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-  setupTime: z.string().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
+  setupTimeHour: z.string().optional(),
+  setupTimeMinute: z.string().optional(),
+  setupTimePeriod: z.string().optional(),
+  startTimeHour: z.string().optional(),
+  startTimeMinute: z.string().optional(),
+  startTimePeriod: z.string().optional(),
+  endTimeHour: z.string().optional(),
+  endTimeMinute: z.string().optional(),
+  endTimePeriod: z.string().optional(),
   selectedItems: z.array(z.string()).default([]),
   otherNeeds: z.string().optional(),
 });
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
+
+// Helper function to format time from separate fields
+function formatTime(hour: string | undefined, minute: string | undefined, period: string | undefined): string {
+  if (!hour || !minute || !period) return "";
+  return `${hour}:${minute} ${period}`;
+}
+
+// Time picker component
+function TimePicker({ 
+  hourValue, 
+  minuteValue, 
+  periodValue, 
+  onHourChange, 
+  onMinuteChange, 
+  onPeriodChange,
+  label 
+}: {
+  hourValue: string;
+  minuteValue: string;
+  periodValue: string;
+  onHourChange: (value: string) => void;
+  onMinuteChange: (value: string) => void;
+  onPeriodChange: (value: string) => void;
+  label: string;
+}) {
+  const hours = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+  const minutes = ["00", "15", "30", "45"];
+  const periods = ["AM", "PM"];
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium leading-none">{label}</label>
+      <div className="flex gap-2">
+        <Select value={hourValue} onValueChange={onHourChange}>
+          <SelectTrigger className="w-[70px]">
+            <SelectValue placeholder="--" />
+          </SelectTrigger>
+          <SelectContent position="popper" className="z-50">
+            {hours.map((hour) => (
+              <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="flex items-center text-lg font-medium">:</span>
+        <Select value={minuteValue} onValueChange={onMinuteChange}>
+          <SelectTrigger className="w-[70px]">
+            <SelectValue placeholder="--" />
+          </SelectTrigger>
+          <SelectContent position="popper" className="z-50">
+            {minutes.map((minute) => (
+              <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={periodValue} onValueChange={onPeriodChange}>
+          <SelectTrigger className="w-[75px]">
+            <SelectValue placeholder="--" />
+          </SelectTrigger>
+          <SelectContent position="popper" className="z-50">
+            {periods.map((period) => (
+              <SelectItem key={period} value={period}>{period}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
 
 export default function RequestForm() {
   const navigate = useNavigate();
@@ -58,10 +133,17 @@ export default function RequestForm() {
       facility: "",
       event: "",
       eventDate: new Date().toISOString().split('T')[0],
+      dateNeeded: "",
       priority: "medium",
-      setupTime: "",
-      startTime: "",
-      endTime: "",
+      setupTimeHour: "",
+      setupTimeMinute: "",
+      setupTimePeriod: "",
+      startTimeHour: "",
+      startTimeMinute: "",
+      startTimePeriod: "",
+      endTimeHour: "",
+      endTimeMinute: "",
+      endTimePeriod: "",
       selectedItems: [],
       otherNeeds: "",
     }
@@ -70,7 +152,15 @@ export default function RequestForm() {
   async function onSubmit(data: RequestFormValues) {
     setIsSubmitting(true);
     try {
-      const res = await apiRequest("POST", "/api/requests", data);
+      // Format time fields for submission
+      const formattedData = {
+        ...data,
+        setupTime: formatTime(data.setupTimeHour, data.setupTimeMinute, data.setupTimePeriod),
+        startTime: formatTime(data.startTimeHour, data.startTimeMinute, data.startTimePeriod),
+        endTime: formatTime(data.endTimeHour, data.endTimeMinute, data.endTimePeriod),
+      };
+      
+      const res = await apiRequest("POST", "/api/requests", formattedData);
       const newRequest = await res.json();
       
       toast({
@@ -134,7 +224,7 @@ export default function RequestForm() {
                               <SelectValue placeholder="Select a facility" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent position="popper" className="z-50">
                             {facilitiesLoading ? (
                               <SelectItem value="loading" disabled>Loading facilities...</SelectItem>
                             ) : facilitiesError ? (
@@ -164,7 +254,7 @@ export default function RequestForm() {
                       <FormItem>
                         <FormLabel>Event Title</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} data-testid="input-event-title" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -180,9 +270,24 @@ export default function RequestForm() {
                       <FormItem>
                         <FormLabel>Date Reported</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} disabled className="bg-gray-100 cursor-not-allowed" />
+                          <Input type="date" {...field} disabled className="bg-gray-100 cursor-not-allowed" data-testid="input-date-reported" />
                         </FormControl>
                         <FormDescription>Automatically set to today's date</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="dateNeeded"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date Needed</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} min={today} data-testid="input-date-needed" />
+                        </FormControl>
+                        <FormDescription>When do you need this completed?</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -199,11 +304,11 @@ export default function RequestForm() {
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger data-testid="select-priority">
                               <SelectValue placeholder="Select priority" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent position="popper" className="z-50">
                             <SelectItem value="low">Low</SelectItem>
                             <SelectItem value="medium">Medium</SelectItem>
                             <SelectItem value="high">High</SelectItem>
@@ -217,47 +322,37 @@ export default function RequestForm() {
                       </FormItem>
                     )}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="setupTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Setup Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                </div>
+                
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                  <TimePicker
+                    label="Setup Time"
+                    hourValue={form.watch("setupTimeHour") || ""}
+                    minuteValue={form.watch("setupTimeMinute") || ""}
+                    periodValue={form.watch("setupTimePeriod") || ""}
+                    onHourChange={(value) => form.setValue("setupTimeHour", value)}
+                    onMinuteChange={(value) => form.setValue("setupTimeMinute", value)}
+                    onPeriodChange={(value) => form.setValue("setupTimePeriod", value)}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <TimePicker
+                    label="Start Time"
+                    hourValue={form.watch("startTimeHour") || ""}
+                    minuteValue={form.watch("startTimeMinute") || ""}
+                    periodValue={form.watch("startTimePeriod") || ""}
+                    onHourChange={(value) => form.setValue("startTimeHour", value)}
+                    onMinuteChange={(value) => form.setValue("startTimeMinute", value)}
+                    onPeriodChange={(value) => form.setValue("startTimePeriod", value)}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="endTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <Input type="time" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <TimePicker
+                    label="End Time"
+                    hourValue={form.watch("endTimeHour") || ""}
+                    minuteValue={form.watch("endTimeMinute") || ""}
+                    periodValue={form.watch("endTimePeriod") || ""}
+                    onHourChange={(value) => form.setValue("endTimeHour", value)}
+                    onMinuteChange={(value) => form.setValue("endTimeMinute", value)}
+                    onPeriodChange={(value) => form.setValue("endTimePeriod", value)}
                   />
                 </div>
                 
@@ -290,6 +385,7 @@ export default function RequestForm() {
                                     form.setValue("selectedItems", currentItems.filter(i => i !== item.name));
                                   }
                                 }}
+                                data-testid={`checkbox-item-${index}`}
                               />
                               <div className="flex-1">
                                 <label 
@@ -313,7 +409,6 @@ export default function RequestForm() {
                       })()}
                     </div>
                   ) : (
-                    // <p className="text-gray-500">Please select a facility to see available items</p>
                     ""
                   )}
                 
@@ -323,12 +418,12 @@ export default function RequestForm() {
                     name="otherNeeds"
                     render={({ field }) => (
                       <FormItem>
-                        {/* <FormLabel>Additional Notes or Special Requirements</FormLabel> */}
                         <FormControl>
                           <Textarea 
                             rows={4} 
                             placeholder="Please describe any specific items or services needed for this event..." 
                             {...field} 
+                            data-testid="textarea-other-needs"
                           />
                         </FormControl>
                         <FormMessage />
@@ -346,12 +441,14 @@ export default function RequestForm() {
                       variant="outline" 
                       onClick={() => navigate("/dashboard")}
                       className="mr-3"
+                      data-testid="button-cancel"
                     >
                       Cancel
                     </Button>
                     <Button 
                       type="submit" 
                       disabled={isSubmitting}
+                      data-testid="button-submit"
                     >
                       {isSubmitting ? "Submitting..." : "Submit Request"}
                     </Button>
