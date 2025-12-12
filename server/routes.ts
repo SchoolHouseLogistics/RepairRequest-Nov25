@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { isAuthenticated } from "./subAuth.js";
-import { sendRequestNotificationEmails } from "./emailService";
+import { sendRequestNotificationEmails, sendLaborRequestNotificationEmails } from "./emailService";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -489,28 +489,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : [];
 
         if (organization && adminEmails.length > 0) {
-          await sendRequestNotificationEmails({
+          await sendLaborRequestNotificationEmails({
             requestId: createdRequest.id,
-            requestType: 'facility',
             title: req.body.event,
-            description: itemsNote,
+            facility: req.body.facility,
+            dateReported: req.body.eventDate,
+            dateNeeded: req.body.dateNeeded || '',
             priority: req.body.priority || 'medium',
-            location: req.body.facility,
+            setupTime: req.body.setupTime || '',
+            startTime: req.body.startTime || '',
+            endTime: req.body.endTime || '',
+            selectedItems: req.body.selectedItems || [],
+            otherNeeds: req.body.otherNeeds || '',
             requesterName: `${user.firstName} ${user.lastName}`,
             requesterEmail: user.email,
             organizationName: organization.name,
             createdAt: new Date(createdRequest.createdAt)
           }, adminEmails);
-          console.log("Email notifications sent successfully");
+          console.log("Labor email notifications sent successfully");
         } else {
-          console.log("Skipping email notifications - no organization or admin emails found");
+          console.log("Skipping labor email notifications - no organization or admin emails found");
         }
       } catch (emailError) {
-        console.error("Email notification error:", emailError);
+        console.error("Labor email notification error:", emailError);
         // Don't fail the request if email fails
       }
 
-      console.log("=== PRIORITY REQUEST SUBMISSION COMPLETED SUCCESSFULLY ===");
+      console.log("=== LABOR REQUEST SUBMISSION COMPLETED SUCCESSFULLY ===");
       res.status(201).json(createdRequest);
     } catch (error) {
       console.error("=== UNEXPECTED ERROR IN PRIORITY FACILITIES REQUEST ===");
