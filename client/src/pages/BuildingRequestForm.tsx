@@ -282,8 +282,9 @@ export default function BuildingRequestForm() {
                     <FormItem>
                       <FormLabel>Date Reported</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} disabled className="bg-gray-100 cursor-not-allowed" />
                       </FormControl>
+                      <FormDescription>Automatically set to today's date</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

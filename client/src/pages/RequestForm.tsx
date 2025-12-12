@@ -178,10 +178,11 @@ export default function RequestForm() {
                     name="eventDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Date of Event</FormLabel>
+                        <FormLabel>Date Reported</FormLabel>
                         <FormControl>
-                          <Input type="date" min={today} {...field} />
+                          <Input type="date" {...field} disabled className="bg-gray-100 cursor-not-allowed" />
                         </FormControl>
+                        <FormDescription>Automatically set to today's date</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
