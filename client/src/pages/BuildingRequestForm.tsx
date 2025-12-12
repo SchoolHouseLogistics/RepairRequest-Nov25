@@ -241,7 +241,7 @@ export default function BuildingRequestForm() {
                               <SelectValue placeholder={!form.getValues("facility") ? "Select a building first" : "Select a room"} />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="max-h-[300px] overflow-y-auto">
+                          <SelectContent position="popper" className="max-h-[300px] overflow-y-auto z-50">
                             {availableRooms.length > 0 ? (
                               availableRooms.map((room: string) => (
                                 <SelectItem key={room} value={room}>
