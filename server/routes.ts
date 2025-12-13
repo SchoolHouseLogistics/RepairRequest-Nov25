@@ -1414,15 +1414,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Admin and maintenance staff can access all requests
-      if (user.role !== 'admin' && user.role !== 'maintenance') {
-        // Regular users need to be the requestor
-        const isRequestor = await dbStorage.isRequestor(userId, requestId);
-        if (!isRequestor) {
-          return res.status(403).json({ message: "Unauthorized" });
-        }
-      }
-
       const request = await dbStorage.getRequestDetails(requestId);
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
@@ -1445,15 +1436,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Admin and maintenance staff can access all requests
-      if (user.role !== 'admin' && user.role !== 'maintenance') {
-        // Regular users need to be the requestor
-        const isRequestor = await dbStorage.isRequestor(userId, requestId);
-        if (!isRequestor) {
-          return res.status(403).json({ message: "Unauthorized" });
-        }
-      }
-
       const timeline = await dbStorage.getRequestTimeline(requestId);
       res.json(timeline);
     } catch (error) {
@@ -1470,12 +1452,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId || !user) {
         return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      // Check if user has access to this request
-      const canAccess = await dbStorage.canAccessRequest(userId, requestId);
-      if (!canAccess) {
-        return res.status(403).json({ message: "Unauthorized" });
       }
 
       const messages = await dbStorage.getRequestMessages(requestId);
