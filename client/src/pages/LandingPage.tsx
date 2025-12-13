@@ -69,7 +69,7 @@ export default function LandingPage() {
                 Streamline Maintenance & Work Requests for Your Entire Organization
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                RepairRequest gives businesses one simple platform to capture issues, assign tasks, track progress, and keep teams aligned—no matter what type of facilities you manage.
+                RepairRequest gives businesses one simple platform to capture issues, assign tasks, track progress, and keep teams aligned no matter what type of facilities you manage.
               </p>
               <div className="space-y-3 mb-8 max-w-2xl mx-auto lg:mx-0">
                 <div className="flex items-center space-x-3">
