@@ -412,13 +412,6 @@ export default function Contact() {
               </Card>
             </div>
 
-            <div className="text-center mt-8">
-              <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                  Schedule Demo
-                </Button>
-              </a>
-            </div>
           </div>
         </div>
       </section>
