@@ -73,7 +73,7 @@ const faqItems = [
 
 export default function FAQ() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
         <title>FAQ - RepairRequest Facilities Management Questions</title>
         <meta name="description" content="Get answers to frequently asked questions about RepairRequest facilities management software, implementation, pricing, support, and features." />
@@ -87,23 +87,52 @@ export default function FAQ() {
 
       <PublicHeader currentPage="faq" />
 
-      <main className="py-16 md:py-24">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header Section */}
-          <div className="text-center mb-12">
-            <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">
-              FAQs
-            </p>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Frequently Asked Questions
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Everything you need to know before getting started with RepairRequest.
-            </p>
+      {/* Promotional Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm sm:text-base font-medium text-left">
+                Try RepairRequest Free for 30 Days! 
+                <span className="hidden sm:inline ml-2">No credit card required. Full access to all features. Cancel anytime.</span>
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <a href="/api/login" className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center">
+                Start Free Trial
+                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+              <button className="text-white hover:text-blue-100 transition-colors p-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Accordion FAQ */}
-          <div className="bg-card rounded-lg border shadow-sm">
+      {/* Hero Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-sm font-medium uppercase tracking-wide text-gray-500 mb-4">
+            FAQs
+          </p>
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+            Frequently Asked Questions
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Everything you need to know before getting started with RepairRequest.
+          </p>
+        </div>
+      </section>
+
+      {/* Accordion FAQ Section */}
+      <section className="pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg border shadow-sm">
             <Accordion type="single" collapsible className="w-full">
               {faqItems.map((item, index) => (
                 <AccordionItem 
@@ -113,12 +142,12 @@ export default function FAQ() {
                   data-testid={`faq-item-${index}`}
                 >
                   <AccordionTrigger 
-                    className="text-left text-base font-medium hover:no-underline"
+                    className="text-left text-base font-medium hover:no-underline text-gray-900"
                     data-testid={`faq-trigger-${index}`}
                   >
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
+                  <AccordionContent className="text-gray-600">
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -128,15 +157,15 @@ export default function FAQ() {
 
           {/* CTA Section */}
           <div className="mt-12 text-center">
-            <p className="text-lg text-muted-foreground mb-4">
+            <p className="text-xl text-gray-600 mb-4">
               Still have questions?
             </p>
-            <Button asChild data-testid="button-contact-support">
+            <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700" data-testid="button-contact-support">
               <Link to="/contact">Contact Support</Link>
             </Button>
           </div>
         </div>
-      </main>
+      </section>
 
       <PublicFooter />
       <ScrollToTopButton />
