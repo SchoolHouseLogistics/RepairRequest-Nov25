@@ -5,12 +5,57 @@ import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import session from "express-session";
 import pgSimple from "connect-pg-simple";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { db } from "./db.js";
-// import adminUsersRouter from "./routes/adminUsers";
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Security: Add Helmet.js for security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://accounts.google.com", "https://api.zeptomail.com"],
+      frameSrc: ["'self'", "https://accounts.google.com"],
+      frameAncestors: isProduction ? ["'self'", "https://*.replit.dev", "https://*.replit.app"] : ["'self'", "http://localhost:*", "https://*.replit.dev"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+}));
+
+// Security: Rate limiting for API endpoints
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { message: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.path.startsWith('/api'), // Only limit API routes
+});
+
+// Security: Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login attempts per windowMs
+  message: { message: "Too many login attempts, please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/signup', authLimiter);
+app.use('/api/auth', authLimiter);
+
 app.use(express.json({ limit: "5mb" }));
-// app.use(adminUsersRouter);
 
 // Serve attached assets directory as static files FIRST
 app.use('/attached_assets', express.static(path.resolve(process.cwd(), 'attached_assets')));
@@ -31,7 +76,9 @@ const createSessionsTable = async () => {
         expire TIMESTAMP NOT NULL
       )
     `);
-    console.log("✅ Sessions table ready");
+    if (!isProduction) {
+      console.log("✅ Sessions table ready");
+    }
   } catch (error) {
     console.error("❌ Error creating sessions table:", error);
   }
@@ -45,7 +92,7 @@ const getSessionSecret = (): string => {
   if (process.env.SESSION_SECRET) {
     return process.env.SESSION_SECRET;
   }
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction) {
     throw new Error('SESSION_SECRET environment variable is required in production');
   }
   return 'dev-secret-change-in-production';
@@ -61,11 +108,11 @@ app.use(session({
   secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Trust the reverse proxy (needed for secure cookies behind proxy)
+  proxy: true,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     httpOnly: true,
-    sameSite: 'lax', // Must be 'lax' for OAuth redirects to work
+    sameSite: 'lax',
     maxAge: 1000 * 60 * 60 * 24 // 24 hours
   }
 }));
@@ -84,32 +131,51 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Production-aware logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  const reqPath = req.path;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+  // Skip detailed logging in production for non-error responses
+  if (isProduction) {
+    res.on("finish", () => {
+      // Only log errors in production
+      if (res.statusCode >= 400) {
+        const duration = Date.now() - start;
+        log(`${req.method} ${reqPath} ${res.statusCode} in ${duration}ms`);
       }
+    });
+  } else {
+    // Development: detailed logging
+    let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+    const originalResJson = res.json;
+    res.json = function (bodyJson, ...args) {
+      capturedJsonResponse = bodyJson;
+      return originalResJson.apply(res, [bodyJson, ...args]);
+    };
+
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (reqPath.startsWith("/api")) {
+        let logLine = `${req.method} ${reqPath} ${res.statusCode} in ${duration}ms`;
+        if (capturedJsonResponse) {
+          // Don't log sensitive data even in development
+          const safeResponse = { ...capturedJsonResponse };
+          delete safeResponse.password;
+          delete safeResponse.token;
+          delete safeResponse.secret;
+          logLine += ` :: ${JSON.stringify(safeResponse)}`;
+        }
+
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "…";
+        }
+
+        log(logLine);
       }
-
-      log(logLine);
-    }
-  });
+    });
+  }
 
   next();
 });
@@ -125,18 +191,12 @@ app.use((req, res, next) => {
     throw err;
   })
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = process.env.PORT || 5000;
   server.listen({
     port,

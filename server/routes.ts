@@ -11,7 +11,7 @@ import z from "zod"
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { sendEmail } from "./emailService";
-import { sendContactFormEmails, isZeptoMailConfigured, sendTestEmail } from "./zeptoMailService";
+import { sendContactFormEmails, isZeptoMailConfigured } from "./zeptoMailService";
 
 // Extend session interface to include user property
 declare module "express-session" {
@@ -341,36 +341,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // PRIORITY ROUTES: Register before Vite middleware to avoid conflicts
-
-  // Test email endpoint for debugging
-  app.post("/api/test-email", async (req, res) => {
-    console.log("=== EMAIL TEST ENDPOINT ===");
-    try {
-      const { sendRequestNotificationEmails } = await import("./emailService.js");
-
-      const testData = {
-        requestId: 999,
-        requestType: 'facility' as const,
-        title: 'Test Email Request',
-        description: 'This is a test email to verify the notification system is working properly.',
-        priority: 'medium',
-        location: 'Test Building',
-        requesterName: 'Test User',
-        requesterEmail: 'jeffacarstens@gmail.com',
-        organizationName: 'Canterbury School',
-        createdAt: new Date()
-      };
-
-      const testAdminEmails = ['jeffacarstens@gmail.com'];
-
-      await sendRequestNotificationEmails(testData, testAdminEmails);
-
-      res.json({ message: 'Test email sent successfully' });
-    } catch (error) {
-      console.error('Test email failed:', error);
-      res.status(500).json({ message: 'Test email failed', error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  });
 
   // Priority facilities request creation route (FACILITIES ONLY - building requests go to /api/building-requests)
   app.post("/api/requests", async (req, res) => {
@@ -988,57 +958,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileSize: 5 * 1024 * 1024 // 5MB size limit
     }
   });
-
-  // Simple test endpoint
-  app.get("/api/test-simple", (req, res) => {
-    res.json({ message: "Server is working", timestamp: new Date().toISOString() });
-  });
-
-  // Test upload endpoint for debugging (no auth for testing)
-  app.post("/api/test-upload", (req, res, next) => {
-    console.log("=== TEST UPLOAD STARTED ===");
-    console.log("Request content-type:", req.headers['content-type']);
-
-    upload.single('test')(req, res, (err) => {
-      console.log("=== TEST UPLOAD MULTER CALLBACK ===");
-      console.log("Multer error:", err);
-      console.log("File after multer:", req.file);
-
-      if (err) {
-        console.error("MULTER ERROR:", err);
-        return res.status(400).json({ error: err.message });
-      }
-
-      try {
-        console.log("File received:", req.file);
-        console.log("Body received:", req.body);
-
-        if (req.file) {
-          console.log("File details:", {
-            originalname: req.file.originalname,
-            filename: req.file.filename,
-            path: req.file.path,
-            size: req.file.size
-          });
-
-          const exists = fs.existsSync(req.file.path);
-          console.log(`File exists at ${req.file.path}: ${exists}`);
-        }
-
-        res.json({
-          success: true,
-          file: req.file,
-          uploadDir: uploadDir,
-          cwd: process.cwd()
-        });
-      } catch (error: any) {
-        console.error("Test upload error:", error);
-        res.status(500).json({ error: error.message });
-      }
-    });
-  });
-
-
 
   // Allow all emails - Google OAuth will manage user access
   function isAllowedEmail(email: string): boolean {
@@ -2725,20 +2644,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("[CONTACT] Error:", error);
       res.status(500).json({ error: "Failed to submit message" });
     }
-  });
-
-  // Test ZeptoMail simple email endpoint (for debugging)
-  app.post("/api/test-zeptomail", async (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email address required" });
-    }
-    
-    console.log("[ZEPTOMAIL SIMPLE TEST] Testing simple email to:", email);
-    const result = await sendTestEmail(email);
-    console.log("[ZEPTOMAIL SIMPLE TEST] Result:", JSON.stringify(result, null, 2));
-    
-    res.json(result);
   });
 
   // Delete organization (super admin only)
