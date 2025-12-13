@@ -9,6 +9,7 @@ import { Mail, Lock, Eye, EyeOff, User } from "lucide-react"
 import { useState } from "react"
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth"
+import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import { useQueryClient } from "@tanstack/react-query"
 
 export default function SignupPage() {
@@ -113,7 +114,7 @@ export default function SignupPage() {
         <div className="w-full lg:w-1/2 p-8 lg:p-12">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <img src="/RepairRequest Logo Transparent_1750783382845.png" alt="RepairRequest Logo" className="w-10 h-10" />
+            <img src={logoPath} alt="RepairRequest" className="w-10 h-10" />
             <span className="text-lg font-semibold text-gray-900">Repair Request</span>
           </div>
 
