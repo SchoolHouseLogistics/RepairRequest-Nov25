@@ -93,7 +93,7 @@ export default function LandingPage() {
                 </Link>
                 <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
                   <Button size="lg" variant="outline">
-                    Schedule Call
+                    Learn What's Possible
                   </Button>
                 </a>
               </div>

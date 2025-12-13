@@ -72,7 +72,7 @@ export default function PublicHeader({ currentPage = "" }: PublicHeaderProps) {
             </Link>
             <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white ml-4">
-                Schedule Call
+                Learn What's Possible
               </Button>
             </a>
           </nav>
@@ -154,7 +154,7 @@ export default function PublicHeader({ currentPage = "" }: PublicHeaderProps) {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                        Schedule Call
+                        Learn What's Possible
                       </Button>
                     </a>
                   </div>

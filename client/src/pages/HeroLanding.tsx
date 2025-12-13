@@ -84,47 +84,59 @@ export default function HeroLanding() {
           <Badge className="mb-6 bg-blue-100 text-blue-800 hover:bg-blue-100">
             Trusted by Teams Across Every Industry
           </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Streamline Maintenance & Work Requests for Your Entire Organization
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            One Central System for Maintenance & Work Requests
           </h1>
-          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            RepairRequest gives your business one simple platform to capture
-            issues, assign tasks, track progress, and keep teams aligned, no
-            matter what type of facilities you manage.
+          <p className="text-lg md:text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+            RepairRequest replaces emails, paper forms, and verbal requests with one simple platform for submitting, assigning, and tracking maintenance and work requests — so nothing gets missed and everyone stays accountable.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link to="/signup">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                Get Started Today
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                Get Started
               </Button>
             </Link>
             <Link to="https://calendly.com/schoolhouselogistics">
-              <Button size="lg" variant="outline">
-                Schedule Demo
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                Request a Demo
               </Button>
             </Link>
           </div>
 
           {/* Universal Benefits Checkmarks */}
-          <div className="space-y-4 max-w-2xl mx-auto">
-            <div className="flex items-center justify-center space-x-3">
-              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">
-                Submit requests in seconds with photos, categories & priority
-              </span>
+          <div className="space-y-6 max-w-2xl mx-auto text-left sm:text-center">
+            <div className="flex items-start sm:items-center sm:justify-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div>
+                <span className="text-lg font-semibold text-gray-900 block">
+                  Submit requests in seconds
+                </span>
+                <span className="text-base text-gray-600">
+                  Add photos, locations, categories, and priority from any device
+                </span>
+              </div>
             </div>
-            <div className="flex items-center justify-center space-x-3">
-              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">
-                Auto-assign tasks to the right team and track status in real
-                time
-              </span>
+            <div className="flex items-start sm:items-center sm:justify-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div>
+                <span className="text-lg font-semibold text-gray-900 block">
+                  Route work automatically
+                </span>
+                <span className="text-base text-gray-600">
+                  Assign requests to the right staff, team, or vendor and track progress in real time
+                </span>
+              </div>
             </div>
-            <div className="flex items-center justify-center space-x-3">
-              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">
-                Reduce downtime & keep operations running smoothly
-              </span>
+            <div className="flex items-start sm:items-center sm:justify-center space-x-3">
+              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <div>
+                <span className="text-lg font-semibold text-gray-900 block">
+                  Stay organized and accountable
+                </span>
+                <span className="text-base text-gray-600">
+                  See open, in-progress, and completed work at a glance
+                </span>
+              </div>
             </div>
           </div>
         </div>
