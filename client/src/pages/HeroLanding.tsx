@@ -88,7 +88,7 @@ export default function HeroLanding() {
             One Central System for Maintenance & Work Requests
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            RepairRequest replaces emails, paper forms, and verbal requests with one simple platform for submitting, assigning, and tracking maintenance and work requests — so nothing gets missed and everyone stays accountable.
+            RepairRequest replaces emails, paper forms, and verbal requests with one simple platform for submitting, assigning, and tracking maintenance and work requests so nothing gets missed and everyone stays accountable.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link to="/signup">
