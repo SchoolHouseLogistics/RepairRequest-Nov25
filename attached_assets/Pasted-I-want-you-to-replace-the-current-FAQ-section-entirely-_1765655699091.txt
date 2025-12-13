@@ -1,0 +1,119 @@
+I want you to replace the current FAQ section entirely with a new accordion-based FAQ section using the exact copy below.
+
+1. What to Replace
+
+Locate the existing FAQ section (component or page section).
+
+Remove the old FAQ content and logic.
+
+Replace it with a reusable component named FaqSection.tsx (or update the existing FAQ component if one already exists).
+
+Re-import it where needed so the page layout does not break.
+
+2. Header Section Requirements (IMPORTANT)
+
+The FAQ section must include a clear header area above the accordion with the following structure:
+
+Header Layout
+
+Center-aligned content
+
+Max width container (do not span full width)
+
+Comfortable vertical spacing above and below
+
+Header Elements (in this order)
+
+Section Label (small text)
+
+Text: FAQs
+
+Style: uppercase, small font, slightly muted color
+
+Main Heading (H2)
+
+Text: Frequently Asked Questions
+
+Prominent and readable, but not oversized
+
+Subheading / Supporting Text
+
+Text: Everything you need to know before getting started with RepairRequest.
+
+Slightly muted compared to the heading
+
+Max width narrower than the heading for readability
+
+3. Accordion Requirements
+
+One question open at a time
+
+Clicking an open question closes it
+
+Smooth open/close animation
+
+Use semantic HTML (button)
+
+Include aria-expanded and keyboard support
+
+Use existing accordion styles/components if present
+
+4. CTA Section (Below FAQs)
+
+After the accordion list, include a call-to-action block:
+
+Text line: Still have questions?
+
+Button:
+
+Label: Contact Support
+
+Link: /contact
+
+Center-aligned
+
+Visually separated from the accordion (margin or divider)
+
+5. FAQ Content (Use Exactly This Copy)
+
+What is RepairRequest?
+RepairRequest is a simple, centralized system for submitting, tracking, and managing maintenance and repair requests across your organization. It replaces emails, paper forms, and hallway conversations with one clear, organized workflow.
+
+Who is RepairRequest for?
+RepairRequest is built for any organization that manages facilities or shared spaces, including schools and school districts, churches and religious organizations, office buildings, athletic facilities, nonprofits, and community organizations. If people report issues and someone needs to fix them, RepairRequest fits.
+
+How do users submit a repair request?
+Users submit requests through a simple online form. They can include the issue or problem, location or facility, priority level, and optional notes or photos. Once submitted, the request is instantly logged in the system.
+
+Do users need an account to submit a repair request?
+This depends on how your organization is set up. Admins can allow logged-in staff only, public or shared form access, or role-based access for staff and maintenance teams. You control who can submit and who can manage requests.
+
+How are requests tracked?
+Each request has a clear status, such as New, In Progress, Waiting on Parts, or Completed. Admins and maintenance teams can update statuses, add internal notes, and keep everything documented in one place.
+
+Does RepairRequest notify people when something changes?
+Yes. RepairRequest can send automatic notifications when a request is submitted, a status is updated, or a request is completed. This keeps everyone informed without back-and-forth emails.
+
+Can multiple people manage requests?
+Yes. RepairRequest supports multiple admins and maintenance staff so work can be shared across a team. Everyone sees the same up-to-date information.
+
+Can we organize requests by building or location?
+Yes. Requests can be organized by facility, building, and room or area. This makes it easy to spot recurring issues or manage large campuses.
+
+Is RepairRequest mobile-friendly?
+Yes. RepairRequest works on phones, tablets, and desktops so requests can be submitted or updated from anywhere.
+
+How long does setup take?
+Most organizations are up and running in less than a day. Setup is intentionally simple, and we help configure the system to match your workflow.
+
+Can RepairRequest scale as we grow?
+Absolutely. RepairRequest works just as well for a single building as it does for multi-facility organizations.
+
+Is our data secure?
+Yes. We take data security seriously and use modern best practices to protect your information.
+
+What kind of support do you offer?
+We provide onboarding support, ongoing customer support, and help with configuration and best practices. You are not left to figure it out on your own.
+
+How do we get started?
+Getting started is easy. Request access, set up your facilities and users, and start accepting repair requests immediately.
