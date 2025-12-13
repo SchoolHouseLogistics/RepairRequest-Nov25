@@ -11,7 +11,6 @@ import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
-import CalendlyWidget from "@/components/CalendlyWidget";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Contact() {
@@ -414,9 +413,11 @@ export default function Contact() {
             </div>
 
             <div className="text-center mt-8">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                Schedule Demo
-              </Button>
+              <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  Schedule Demo
+                </Button>
+              </a>
             </div>
           </div>
         </div>

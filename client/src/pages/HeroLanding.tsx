@@ -96,11 +96,11 @@ export default function HeroLanding() {
                 Get Started
               </Button>
             </Link>
-            <Link to="https://calendly.com/schoolhouselogistics">
+            <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
               <Button size="lg" variant="outline" className="w-full sm:w-auto">
                 Request a Demo
               </Button>
-            </Link>
+            </a>
           </div>
 
           {/* Universal Benefits Checkmarks */}
