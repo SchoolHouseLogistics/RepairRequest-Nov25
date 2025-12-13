@@ -58,7 +58,7 @@ export default function PublicFooter() {
               <li><Link to="/about" className="text-gray-300 hover:text-white transition-colors">About Us</Link></li>
               <li><Link to="/contact" className="text-gray-300 hover:text-white transition-colors">Contact Us</Link></li>
               <li><a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white transition-colors">Book A Demo</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">YouTube Channel</a></li>
+              <li><a href="https://www.youtube.com/@SchoolHouseLogistics" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white transition-colors">YouTube Channel</a></li>
             </ul>
           </div>
 
