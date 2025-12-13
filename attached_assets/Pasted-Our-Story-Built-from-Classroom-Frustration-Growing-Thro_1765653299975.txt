@@ -1,0 +1,24 @@
+Our Story
+
+Built from Classroom Frustration. Growing Through Innovation.
+
+SchoolHouse Logistics was founded out of a simple, persistent frustration: schools were overwhelmed with paperwork, confusing workflows, and disconnected systems. As a teacher trying to manage courses, activities, communication, and daily responsibilities, I saw firsthand how much valuable time was being lost to tasks that should have been streamlined or automated.
+
+Facilities and maintenance quickly became another major source of friction. Broken equipment, damaged classrooms, and safety concerns were often reported through emails, sticky notes, or word of mouth. Requests were lost, duplicated, or delayed, leaving staff frustrated and issues unresolved longer than necessary.
+
+Tired of the clutter, I began experimenting with VibeCoding and other AI assisted tools. My original goal was not to start a company. It was simply to solve the problems happening in my own school environment. Early on, that work led to the creation of what would become RepairRequest, a centralized system designed to help schools submit, track, and manage maintenance and repair requests with clarity and accountability.
+
+As I shared these early tools with other teachers and administrators, I quickly realized something: many schools were fighting the exact same battles, and these challenges could be solved much more easily than anyone expected.
+
+That realization became the spark for SchoolHouse Logistics.
+
+What started as small, experimental solutions grew into a clear and larger vision. As more educators expressed the need for tools like RepairRequest and others beyond it, SchoolHouse Logistics took shape as a company dedicated to improving the way schools operate. Our work is grounded in real classroom experience, real educator feedback, and a commitment to designing tools that make school life easier.
+
+Today, SchoolHouse Logistics is building a dedicated internal development team made up of engineers, designers, and product thinkers who work closely with educators to create dependable and thoughtfully designed applications within the SchoolOS ecosystem. RepairRequest is one of those applications, focused specifically on improving facilities communication, reducing downtime, and helping schools maintain safe and functional learning environments.
+
+Our mission remains consistent:
+
+Remove unnecessary complexity so educators can focus on students, not paperwork.
+
+SchoolHouse Logistics began in a classroom with a simple idea.
+Now it is evolving into a team driven organization committed to transforming school operations one workflow at a time.

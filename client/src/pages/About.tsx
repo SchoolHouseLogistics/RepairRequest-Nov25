@@ -15,10 +15,10 @@ export default function About() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
         <title>About Us - RepairRequest by SchoolHouse Logistics</title>
-        <meta name="description" content="Learn about RepairRequest and SchoolHouse Logistics. We're revolutionizing facilities management for schools, businesses, and organizations worldwide." />
+        <meta name="description" content="Learn about RepairRequest and SchoolHouse Logistics. Born from real experience in education, now serving organizations of all types with practical software solutions." />
         <link rel="canonical" href="https://www.repairrequest.org/about" />
-        <meta property="og:title" content="About RepairRequest - Our Mission & Story" />
-        <meta property="og:description" content="Discover how RepairRequest is transforming facility management for organizations of all sizes." />
+        <meta property="og:title" content="About RepairRequest - Our Story and Mission" />
+        <meta property="og:description" content="Discover how we went from solving real educational challenges to building software solutions for organizations worldwide." />
         <meta property="og:url" content="https://www.repairrequest.org/about" />
         <meta name="twitter:title" content="About RepairRequest" />
         <meta name="twitter:description" content="Learn about our mission to revolutionize facilities management." />
@@ -32,8 +32,8 @@ export default function About() {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm sm:text-base font-medium text-left">
-                🎉 Try RepairRequest Free for 30 Days! 
-                <span className="hidden sm:inline ml-2">• No credit card required • Full access to all features • Cancel anytime</span>
+                Try RepairRequest Free for 30 Days! 
+                <span className="hidden sm:inline ml-2">No credit card required. Full access to all features. Cancel anytime.</span>
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -57,55 +57,59 @@ export default function About() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            About
-            <span className="text-blue-600 block">RepairRequest</span>
+            Our Story
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            We're dedicated to revolutionizing how organizations manage their facilities and maintenance operations.
+          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-4xl mx-auto">
+            Built from Classroom Frustration. Growing Through Innovation.
           </p>
         </div>
       </section>
 
       {/* Story Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Our Story
-              </h2>
-              <p className="text-lg text-gray-600 mb-6">
-                RepairRequest was born from a simple observation: facility maintenance management was stuck in the past. Paper forms, lost requests, and inefficient communication were causing headaches for property managers and frustration for users.
-              </p>
-              <p className="text-lg text-gray-600 mb-6">
-                Founded by SchoolHouse Logistics, we set out to create a modern, intuitive platform that would streamline the entire maintenance request process. From submission to completion, we wanted to make every step transparent, efficient, and user-friendly.
-              </p>
-              <p className="text-lg text-gray-600">
-                Today, RepairRequest serves organizations across industries - from educational institutions to commercial real estate - helping them maintain their facilities more effectively while improving communication and accountability.
-              </p>
+      <section className="py-16 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="prose prose-lg max-w-none">
+            <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+              SchoolHouse Logistics was founded out of a simple, persistent frustration: schools were overwhelmed with paperwork, confusing workflows, and disconnected systems. As a teacher trying to manage courses, activities, communication, and daily responsibilities, I saw firsthand how much valuable time was being lost to tasks that should have been streamlined or automated.
+            </p>
+            
+            <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+              Facilities and maintenance quickly became another major source of friction. Broken equipment, damaged classrooms, and safety concerns were often reported through emails, sticky notes, or word of mouth. Requests were lost, duplicated, or delayed, leaving staff frustrated and issues unresolved longer than necessary.
+            </p>
+            
+            <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+              Tired of the clutter, I began experimenting with VibeCoding and other AI assisted tools. My original goal was not to start a company. It was simply to solve the problems happening in my own school environment. Early on, that work led to the creation of what would become RepairRequest, a centralized system designed to help schools submit, track, and manage maintenance and repair requests with clarity and accountability.
+            </p>
+            
+            <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+              As I shared these early tools with other teachers and administrators, I quickly realized something: many schools were fighting the exact same battles, and these challenges could be solved much more easily than anyone expected.
+            </p>
+            
+            <p className="text-xl text-gray-900 font-semibold mb-6">
+              That realization became the spark for SchoolHouse Logistics.
+            </p>
+            
+            <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+              What started as small, experimental solutions grew into a clear and larger vision. As more educators expressed the need for tools like RepairRequest and others beyond it, SchoolHouse Logistics took shape as a company dedicated to improving the way schools operate. Our work is grounded in real classroom experience, real educator feedback, and a commitment to designing tools that make school life easier.
+            </p>
+            
+            <p className="text-lg text-gray-700 mb-8 leading-relaxed">
+              Today, SchoolHouse Logistics is building a dedicated internal development team made up of engineers, designers, and product thinkers who work closely with educators to create dependable and thoughtfully designed applications within the SchoolOS ecosystem. RepairRequest is one of those applications, focused specifically on improving facilities communication, reducing downtime, and helping schools maintain safe and functional learning environments.
+            </p>
+            
+            {/* Mission Callout */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600 p-6 my-8 rounded-r-lg">
+              <p className="text-lg font-semibold text-gray-900 mb-2">Our mission remains consistent:</p>
+              <p className="text-xl text-blue-600 font-bold">Remove unnecessary complexity so educators can focus on students, not paperwork.</p>
             </div>
             
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl shadow-xl p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">By the Numbers</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">500+</div>
-                  <div className="text-gray-600">Organizations</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">10K+</div>
-                  <div className="text-gray-600">Users</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">100K+</div>
-                  <div className="text-gray-600">Requests Processed</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">99.9%</div>
-                  <div className="text-gray-600">Uptime</div>
-                </div>
-              </div>
-            </div>
+            <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+              SchoolHouse Logistics began in a classroom with a simple idea.
+            </p>
+            
+            <p className="text-lg text-gray-700 leading-relaxed">
+              Now it is evolving into a team driven organization committed to transforming school operations one workflow at a time.
+            </p>
           </div>
         </div>
       </section>
