@@ -39,9 +39,9 @@ export default function PublicFooter() {
             </div>
           </div>
 
-          {/* Products Column */}
+          {/* Platform Column */}
           <div className="lg:col-span-3">
-            <h3 className="text-sm font-semibold mb-6 uppercase tracking-wide">Products</h3>
+            <h3 className="text-sm font-semibold mb-6 uppercase tracking-wide">Platform</h3>
             <ul className="space-y-3 text-sm">
               <li><Link to="/pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</Link></li>
               <li><Link to="/faq" className="text-gray-300 hover:text-white transition-colors">FAQ</Link></li>
