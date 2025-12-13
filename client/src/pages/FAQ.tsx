@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Calendar, Mail } from "lucide-react";
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
+import CalendlyWidget from "@/components/CalendlyWidget";
+import ContactForm from "@/components/ContactForm";
 import {
   Accordion,
   AccordionContent,
@@ -154,15 +157,47 @@ export default function FAQ() {
               ))}
             </Accordion>
           </div>
+        </div>
+      </section>
 
-          {/* CTA Section */}
-          <div className="mt-12 text-center">
-            <p className="text-xl text-gray-600 mb-4">
-              Still have questions?
+      {/* Schedule a Demo & Contact Form */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Get In Touch</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Schedule a personalized demo or send us a message
             </p>
-            <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700" data-testid="button-contact-support">
-              <Link to="/contact">Contact Support</Link>
-            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Calendly Widget */}
+            <div className="bg-gray-50 rounded-xl shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Schedule a Meeting</h3>
+                  <p className="text-sm text-gray-500">Book a 30-minute call with our team</p>
+                </div>
+              </div>
+              <CalendlyWidget />
+            </div>
+
+            {/* Contact Form */}
+            <div className="bg-gray-50 rounded-xl shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Send a Message</h3>
+                  <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
+                </div>
+              </div>
+              <ContactForm showOrganizationType={false} />
+            </div>
           </div>
         </div>
       </section>
