@@ -303,9 +303,9 @@ export default function Dashboard() {
           </div>
         )}
         
-        {/* Facilities */}
+        {/* Buildings */}
         <div className="mt-8">
-          <h2 className="text-lg font-heading font-medium text-gray-900">Facilities</h2>
+          <h2 className="text-lg font-heading font-medium text-gray-900">Buildings</h2>
           <div className="mt-4 grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {isLoadingBuildings ? (
               <>
@@ -336,7 +336,7 @@ export default function Dashboard() {
               ))
             ) : (
               <div className="col-span-full text-center py-8">
-                <p className="text-gray-500">No facilities found</p>
+                <p className="text-gray-500">No buildings found</p>
               </div>
             )}
           </div>
