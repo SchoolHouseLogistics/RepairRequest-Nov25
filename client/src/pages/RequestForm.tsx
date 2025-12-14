@@ -226,10 +226,10 @@ export default function RequestForm() {
                           </FormControl>
                           <SelectContent position="popper" className="z-50">
                             {facilitiesLoading ? (
-                              <SelectItem value="loading" disabled>Loading facilities...</SelectItem>
+                              <SelectItem value="loading" disabled>Loading buildings...</SelectItem>
                             ) : facilitiesError ? (
                               <SelectItem value="error" disabled>
-                                {facilitiesError.message.includes('401') ? 'You must be logged in to view facilities.' : 'Error loading facilities'}
+                                {facilitiesError.message.includes('401') ? 'You must be logged in to view buildings.' : 'Error loading buildings'}
                               </SelectItem>
                             ) : facilities && Array.isArray(facilities) && facilities.length > 0 ? (
                               facilities.map((facility: any) => (
@@ -238,7 +238,7 @@ export default function RequestForm() {
                                 </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="none" disabled>No facilities available</SelectItem>
+                              <SelectItem value="none" disabled>No buildings available</SelectItem>
                             )}
                           </SelectContent>
                         </Select>

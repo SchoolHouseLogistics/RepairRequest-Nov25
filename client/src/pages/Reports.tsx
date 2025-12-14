@@ -192,7 +192,7 @@ export default function Reports() {
           <TabsList className="mb-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="monthly">Monthly Trends</TabsTrigger>
-            <TabsTrigger value="facility">By Facility</TabsTrigger>
+            <TabsTrigger value="facility">By Building</TabsTrigger>
             <TabsTrigger value="status">By Status</TabsTrigger>
             <TabsTrigger value="completion">Completion Time</TabsTrigger>
             <TabsTrigger value="requestType">Request Types</TabsTrigger>
@@ -311,10 +311,10 @@ export default function Reports() {
               </Card>
             </div>
 
-            {/* Top Facilities */}
+            {/* Top Buildings */}
             <Card>
               <CardHeader>
-                <CardTitle>Top Requested Facilities</CardTitle>
+                <CardTitle>Top Requested Buildings</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-96">
@@ -363,8 +363,8 @@ export default function Reports() {
           <TabsContent value="facility">
             <Card>
               <CardHeader>
-                <CardTitle>Requests by Facility</CardTitle>
-                <CardDescription>Distribution of maintenance requests across different facilities</CardDescription>
+                <CardTitle>Requests by Building</CardTitle>
+                <CardDescription>Distribution of maintenance requests across different buildings</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-96">
