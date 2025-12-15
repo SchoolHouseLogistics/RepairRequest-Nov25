@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
@@ -62,9 +61,6 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
             <div className="text-center lg:text-left">
-              <Badge className="mb-6 bg-blue-100 text-blue-800 hover:bg-blue-100">
-                Trusted by Teams Across Every Industry
-              </Badge>
               <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
                 Streamline Maintenance & Work Requests for Your Entire Organization
               </h1>
