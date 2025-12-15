@@ -259,8 +259,8 @@ importers:
         version: 3.5.2(zod@3.25.67)
     devDependencies:
       '@replit/vite-plugin-cartographer':
-        specifier: ^0.2.0
-        version: 0.2.7
+        specifier: ^0.4.4
+        version: 0.4.4
       '@replit/vite-plugin-runtime-error-modal':
         specifier: ^0.0.3
         version: 0.0.3
@@ -1872,8 +1872,8 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
-  '@replit/vite-plugin-cartographer@0.2.7':
-    resolution: {integrity: sha512-EkHYIRXKizytI+d1ljrD6yyG3I/uA5NdFWX+Ytx0cCTIZigjiictMBLnLOLH5ndAmWfWAD83cmXeWsFld7gdEA==}
+  '@replit/vite-plugin-cartographer@0.4.4':
+    resolution: {integrity: sha512-Dn3i3gULFUlf+LvQ85S5k+ghmsrgNZwtmVTJyoUlpa04IB5tUMZrQFUWcYCzgpOW9aMKPX6ClSo173k/b9a2eg==}
 
   '@replit/vite-plugin-runtime-error-modal@0.0.3':
     resolution: {integrity: sha512-4wZHGuI9W4o9p8g4Ma/qj++7SP015+FMDGYobj7iap5oEsxXMm0B02TO5Y5PW8eqBPd4wX5l3UGco/hlC0qapw==}
@@ -6009,7 +6009,7 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
-  '@replit/vite-plugin-cartographer@0.2.7':
+  '@replit/vite-plugin-cartographer@0.4.4':
     dependencies:
       '@babel/parser': 7.28.0
       '@babel/traverse': 7.28.0
