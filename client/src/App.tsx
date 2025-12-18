@@ -46,12 +46,27 @@ function RequestDetailWrapper() {
 }
 
 function ProtectedLayout() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const toggleMobileSidebar = () => {
     setIsMobileSidebarOpen(!isMobileSidebarOpen);
   };
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="h-16 w-16 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    window.location.href = '/login';
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-screen">
@@ -118,23 +133,21 @@ function AppContent() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* Protected routes */}
-        {isAuthenticated && (
-          <Route element={<ProtectedLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/new-facilities-request" element={<RequestForm />} />
-            <Route path="/new-building-request" element={<BuildingRequestForm />} />
-            <Route path="/requests/:id" element={<RequestDetailWrapper />} />
-            <Route path="/my-requests" element={<MyRequests />} />
-            <Route path="/assigned-requests" element={<AssignedRequests />} />
-            <Route path="/manage-requests" element={<ManageRequests />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/room-history" element={<RoomHistory />} />
-            <Route path="/admin/organizations" element={<AdminOrganizations />} />
-            <Route path="/admin/buildings-facilities" element={<AdminBuildingsFacilities />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-          </Route>
-        )}
+        {/* Protected routes - ProtectedLayout handles auth redirect */}
+        <Route element={<ProtectedLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/new-facilities-request" element={<RequestForm />} />
+          <Route path="/new-building-request" element={<BuildingRequestForm />} />
+          <Route path="/requests/:id" element={<RequestDetailWrapper />} />
+          <Route path="/my-requests" element={<MyRequests />} />
+          <Route path="/assigned-requests" element={<AssignedRequests />} />
+          <Route path="/manage-requests" element={<ManageRequests />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/room-history" element={<RoomHistory />} />
+          <Route path="/admin/organizations" element={<AdminOrganizations />} />
+          <Route path="/admin/buildings-facilities" element={<AdminBuildingsFacilities />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+        </Route>
 
         {/* Fallback for unknown routes */}
         <Route path="*" element={<NotFound />} />
