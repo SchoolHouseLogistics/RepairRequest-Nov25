@@ -1832,7 +1832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload building image (super admin only) - uses Object Storage for persistence
+  // Upload building image (super admin only) - uses appropriate storage based on environment
   app.post("/api/admin/buildings/:id/image", authMiddleware, (req: any, res) => {
     upload.single('image')(req, res, async (err: any) => {
       if (err) {
@@ -1854,37 +1854,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No image file provided" });
         }
 
-        // Upload to Object Storage for persistence
-        const objectStorage = new ObjectStorageService();
-        const privateDir = objectStorage.getPrivateObjectDir();
-        const objectId = `buildings/${buildingId}-${Date.now()}-${req.file.originalname}`;
-        const fullPath = `${privateDir}/uploads/${objectId}`;
-        
-        // Parse the path to get bucket and object name
-        const pathParts = fullPath.split("/").filter(Boolean);
-        const bucketName = pathParts[0];
-        const objectName = pathParts.slice(1).join("/");
-        
-        // Import and use the object storage client
-        const { objectStorageClient } = await import("./replit_integrations/object_storage");
-        const bucket = objectStorageClient.bucket(bucketName);
-        const gcsFile = bucket.file(objectName);
-        
-        // Read file from disk (multer uses diskStorage) and upload to Object Storage
+        // Read file from disk (multer uses diskStorage)
         const fileBuffer = fs.readFileSync(req.file.path);
-        await gcsFile.save(fileBuffer, {
-          contentType: req.file.mimetype,
-        });
+        const safeFilename = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const objectId = `buildings-${buildingId}-${Date.now()}-${safeFilename}`;
         
-        // Create the URL path that will be served via /objects route
-        const imageUrl = `/objects/uploads/${objectId}`;
+        let imageUrl: string;
+        
+        // Check if we're in Replit environment (has Object Storage sidecar)
+        if (process.env.REPL_ID && process.env.PRIVATE_OBJECT_DIR) {
+          console.log("Using Replit Object Storage for building image");
+          try {
+            const objectStorage = new ObjectStorageService();
+            const privateDir = objectStorage.getPrivateObjectDir();
+            const fullPath = `${privateDir}/uploads/${objectId}`;
+            
+            const pathParts = fullPath.split("/").filter(Boolean);
+            const bucketName = pathParts[0];
+            const objectName = pathParts.slice(1).join("/");
+            
+            const { objectStorageClient } = await import("./replit_integrations/object_storage");
+            const bucket = objectStorageClient.bucket(bucketName);
+            const gcsFile = bucket.file(objectName);
+            
+            await gcsFile.save(fileBuffer, {
+              contentType: req.file.mimetype,
+            });
+            
+            imageUrl = `/objects/uploads/${objectId}`;
+          } catch (storageError) {
+            console.error("Object Storage failed, falling back to local:", storageError);
+            // Fall back to local storage
+            const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            const localPath = path.join(uploadsDir, objectId);
+            fs.writeFileSync(localPath, fileBuffer);
+            imageUrl = `/uploads/photos/${objectId}`;
+          }
+        } else {
+          // Use local filesystem (works on Railway and other platforms)
+          console.log("Using local filesystem for building image");
+          const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          const localPath = path.join(uploadsDir, objectId);
+          fs.writeFileSync(localPath, fileBuffer);
+          imageUrl = `/uploads/photos/${objectId}`;
+        }
+        
         const building = await dbStorage.updateBuilding(buildingId, { imageUrl });
 
-        // Clean up local file after uploading to Object Storage
+        // Clean up multer temp file
         if (req.file.path && fs.existsSync(req.file.path)) {
           fs.unlinkSync(req.file.path);
         }
 
+        console.log(`Building image uploaded successfully: ${imageUrl}`);
         res.json({ 
           success: true, 
           imageUrl,

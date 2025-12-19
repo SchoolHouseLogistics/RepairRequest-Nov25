@@ -50,7 +50,12 @@ const s3 = new S3Client({
 });
 const S3_BUCKET = process.env.AWS_S3_BUCKET;
 
-// Helper to upload to Replit Object Storage (persistent)
+// Check if we're running in Replit environment (has sidecar for Object Storage)
+function isReplitEnvironment(): boolean {
+  return !!process.env.REPL_ID;
+}
+
+// Helper to upload to Replit Object Storage (only works in Replit environment)
 async function uploadToObjectStorage(key: string, fileBuffer: Buffer, contentType: string): Promise<string> {
   try {
     const objectStorage = new ObjectStorageService();
@@ -75,15 +80,30 @@ async function uploadToObjectStorage(key: string, fileBuffer: Buffer, contentTyp
   }
 }
 
-// Helper to upload to S3 (fallback for backward compatibility)
+// Helper to save file locally (works on Railway and other platforms)
+function saveFileLocally(key: string, fileBuffer: Buffer): string {
+  const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  const safeKey = key.replace(/\//g, '-');
+  const localPath = path.join(uploadsDir, safeKey);
+  fs.writeFileSync(localPath, fileBuffer);
+  console.log(`File saved locally to: ${localPath}`);
+  return `/uploads/photos/${safeKey}`;
+}
+
+// Helper to upload files - chooses storage based on environment
 async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: string) {
-  // Try Replit Object Storage first (persistent)
-  if (process.env.PRIVATE_OBJECT_DIR) {
+  // Only use Replit Object Storage if we're actually in Replit
+  if (isReplitEnvironment() && process.env.PRIVATE_OBJECT_DIR) {
+    console.log("Using Replit Object Storage for upload");
     return uploadToObjectStorage(key, fileBuffer, contentType);
   }
   
   // Fall back to AWS S3 if configured
   if (S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
+    console.log("Using AWS S3 for upload");
     const params = {
       Bucket: S3_BUCKET,
       Key: key,
@@ -94,15 +114,9 @@ async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: stri
     return `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
   }
   
-  // Final fallback: save locally (not persistent on Replit deployments)
-  console.warn("No persistent storage configured. Using local filesystem (not recommended for production).");
-  const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-  const localPath = path.join(uploadsDir, key.replace(/\//g, '-'));
-  fs.writeFileSync(localPath, fileBuffer);
-  return `/uploads/photos/${key.replace(/\//g, '-')}`;
+  // Use local filesystem (works on Railway)
+  console.log("Using local filesystem for upload");
+  return saveFileLocally(key, fileBuffer);
 }
 
 // Interface for storage operations
