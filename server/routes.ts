@@ -2871,7 +2871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const command = new GetObjectCommand({
-        Bucket: 'repair-request-121905340783',
+        Bucket: process.env.AWS_S3_BUCKET || 'repair-request-121905340783',
         Key: key,
       });
 
@@ -2880,6 +2880,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error('Error generating presigned URL:', err);
       res.status(500).json({ error: 'Failed to generate presigned URL' });
+    }
+  });
+
+  // Proxy endpoint to serve S3 images (handles private bucket access)
+  app.get('/api/s3-proxy', async (req, res) => {
+    const { url } = req.query;
+
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ error: 'URL parameter is required' });
+    }
+
+    try {
+      // Parse S3 URL to get bucket and key
+      const s3UrlMatch = url.match(/https:\/\/([^.]+)\.s3\.([^.]+)\.amazonaws\.com\/(.+)/);
+      if (!s3UrlMatch) {
+        return res.status(400).json({ error: 'Invalid S3 URL format' });
+      }
+
+      const [, bucket, region, key] = s3UrlMatch;
+      
+      const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: decodeURIComponent(key),
+      });
+
+      // Create S3 client with proper region
+      const { S3Client } = await import('@aws-sdk/client-s3');
+      const regionalS3Client = new S3Client({
+        region: region,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        },
+      });
+
+      const response = await regionalS3Client.send(command);
+      
+      // Set content type
+      if (response.ContentType) {
+        res.setHeader('Content-Type', response.ContentType);
+      }
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      
+      // Stream the body
+      if (response.Body) {
+        const stream = response.Body as NodeJS.ReadableStream;
+        stream.pipe(res);
+      } else {
+        res.status(404).json({ error: 'Image not found' });
+      }
+    } catch (err) {
+      console.error('Error proxying S3 image:', err);
+      res.status(500).json({ error: 'Failed to fetch image' });
     }
   });
 

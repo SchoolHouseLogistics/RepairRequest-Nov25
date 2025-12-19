@@ -16,6 +16,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+// Helper to get image URL - proxies S3 URLs through the server
+function getImageUrl(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  // If it's an S3 URL, proxy it through the server
+  if (imageUrl.includes('.s3.') && imageUrl.includes('.amazonaws.com')) {
+    return `/api/s3-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+  return imageUrl;
+}
+
 const buildingSchema = z.object({
   name: z.string().min(1, "Building name is required"),
   address: z.string().optional(),
@@ -462,7 +472,7 @@ export default function AdminBuildingsFacilities() {
                         {building.imageUrl ? (
                           <>
                             <img 
-                              src={building.imageUrl} 
+                              src={getImageUrl(building.imageUrl) || ''} 
                               alt={building.name}
                               className="w-full h-full object-cover"
                             />

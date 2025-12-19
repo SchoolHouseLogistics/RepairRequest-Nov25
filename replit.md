@@ -141,6 +141,9 @@ Changelog:
 - December 19, 2025: Updated building image uploads to use Object Storage (images now persist across deployments)
 - December 19, 2025: Updated repair request photo uploads to use Object Storage
 - December 19, 2025: Cleared broken image references in database (3 buildings with missing local files)
+- December 19, 2025: Fixed image storage for Railway deployments - now uses AWS S3 when not in Replit environment
+- December 19, 2025: Added S3 image proxy endpoint (/api/s3-proxy) to serve private S3 images securely
+- December 19, 2025: Updated Dashboard and AdminBuildingsFacilities to use S3 proxy for image display
 ```
 
 ## User Preferences

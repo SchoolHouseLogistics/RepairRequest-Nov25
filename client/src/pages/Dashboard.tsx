@@ -6,6 +6,15 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import RequestCard from "@/components/requests/RequestCard";
 import { format } from "date-fns";
 
+// Helper to get image URL - proxies S3 URLs through the server
+function getImageUrl(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  if (imageUrl.includes('.s3.') && imageUrl.includes('.amazonaws.com')) {
+    return `/api/s3-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+  return imageUrl;
+}
+
 
 
 export default function Dashboard() {
@@ -318,7 +327,7 @@ export default function Dashboard() {
                 <div key={building.id} className="relative rounded-lg overflow-hidden h-48 shadow-md" data-testid={`card-building-${building.id}`}>
                   {building.imageUrl ? (
                     <img 
-                      src={building.imageUrl} 
+                      src={getImageUrl(building.imageUrl) || ''} 
                       alt={building.name} 
                       className="w-full h-full object-cover" 
                     />
