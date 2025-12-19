@@ -137,6 +137,10 @@ Changelog:
 - December 5, 2025: Integrated ZeptoMail for contact form emails with dual notifications (admin + customer confirmation)
 - December 5, 2025: Added organizationType field to contact form and database schema
 - December 5, 2025: Updated contact form with proper form handling, validation, and success state
+- December 19, 2025: Integrated Replit Object Storage for persistent photo uploads
+- December 19, 2025: Updated building image uploads to use Object Storage (images now persist across deployments)
+- December 19, 2025: Updated repair request photo uploads to use Object Storage
+- December 19, 2025: Cleared broken image references in database (3 buildings with missing local files)
 ```
 
 ## User Preferences
