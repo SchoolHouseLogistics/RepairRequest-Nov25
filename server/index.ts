@@ -8,6 +8,7 @@ import pgSimple from "connect-pg-simple";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { db } from "./db.js";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -21,7 +22,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://assets.calendly.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "https://accounts.google.com", "https://api.zeptomail.com", "https://calendly.com"],
+      connectSrc: ["'self'", "https://accounts.google.com", "https://api.zeptomail.com", "https://calendly.com", "https://storage.googleapis.com"],
       frameSrc: ["'self'", "https://accounts.google.com", "https://calendly.com"],
       frameAncestors: isProduction ? ["'self'", "https://*.replit.dev", "https://*.replit.app"] : ["'self'", "http://localhost:*", "https://*.replit.dev"],
     },
@@ -130,6 +131,9 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Register Object Storage routes for persistent file uploads
+registerObjectStorageRoutes(app);
 
 // Production-aware logging middleware
 app.use((req, res, next) => {

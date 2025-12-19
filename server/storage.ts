@@ -38,8 +38,9 @@ import { eq, and, desc, count, sql, or, isNull, asc } from "drizzle-orm";
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import path from 'path';
+import { ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 
-// S3 client setup using env variables
+// S3 client setup using env variables (kept for backward compatibility)
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -49,16 +50,59 @@ const s3 = new S3Client({
 });
 const S3_BUCKET = process.env.AWS_S3_BUCKET;
 
-// Helper to upload to S3
+// Helper to upload to Replit Object Storage (persistent)
+async function uploadToObjectStorage(key: string, fileBuffer: Buffer, contentType: string): Promise<string> {
+  try {
+    const objectStorage = new ObjectStorageService();
+    const privateDir = objectStorage.getPrivateObjectDir();
+    const fullPath = `${privateDir}/uploads/${key}`;
+    
+    // Parse the path to get bucket and object name
+    const pathParts = fullPath.split("/").filter(Boolean);
+    const bucketName = pathParts[0];
+    const objectName = pathParts.slice(1).join("/");
+    
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    
+    await file.save(fileBuffer, { contentType });
+    
+    // Return the path that will be served via /objects route
+    return `/objects/uploads/${key}`;
+  } catch (error) {
+    console.error("Failed to upload to Object Storage:", error);
+    throw error;
+  }
+}
+
+// Helper to upload to S3 (fallback for backward compatibility)
 async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: string) {
-  const params = {
-    Bucket: S3_BUCKET!,
-    Key: key,
-    Body: fileBuffer,
-    ContentType: contentType,
-  };
-  await s3.send(new PutObjectCommand(params));
-  return `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  // Try Replit Object Storage first (persistent)
+  if (process.env.PRIVATE_OBJECT_DIR) {
+    return uploadToObjectStorage(key, fileBuffer, contentType);
+  }
+  
+  // Fall back to AWS S3 if configured
+  if (S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
+    const params = {
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: contentType,
+    };
+    await s3.send(new PutObjectCommand(params));
+    return `https://${S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  }
+  
+  // Final fallback: save locally (not persistent on Replit deployments)
+  console.warn("No persistent storage configured. Using local filesystem (not recommended for production).");
+  const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  const localPath = path.join(uploadsDir, key.replace(/\//g, '-'));
+  fs.writeFileSync(localPath, fileBuffer);
+  return `/uploads/photos/${key.replace(/\//g, '-')}`;
 }
 
 // Interface for storage operations
