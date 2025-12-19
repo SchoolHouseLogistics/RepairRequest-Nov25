@@ -1884,7 +1884,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageUrl = `/objects/uploads/${objectId}`;
           } catch (storageError) {
             console.error("Object Storage failed, falling back to local:", storageError);
-            // Fall back to local storage
+            const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+            if (!fs.existsSync(uploadsDir)) {
+              fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            const localPath = path.join(uploadsDir, objectId);
+            fs.writeFileSync(localPath, fileBuffer);
+            imageUrl = `/uploads/photos/${objectId}`;
+          }
+        } else if (process.env.AWS_S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
+          // Use AWS S3 for persistent storage (Railway deployment)
+          console.log("Using AWS S3 for building image");
+          try {
+            const s3Key = `uploads/buildings/${objectId}`;
+            const params = {
+              Bucket: process.env.AWS_S3_BUCKET,
+              Key: s3Key,
+              Body: fileBuffer,
+              ContentType: req.file.mimetype,
+            };
+            const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+            const s3Client = new S3Client({
+              region: process.env.AWS_REGION || 'us-east-1',
+              credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+              },
+            });
+            await s3Client.send(new PutObjectCommand(params));
+            imageUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${s3Key}`;
+          } catch (s3Error) {
+            console.error("S3 upload failed, falling back to local:", s3Error);
             const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
             if (!fs.existsSync(uploadsDir)) {
               fs.mkdirSync(uploadsDir, { recursive: true });
@@ -1894,7 +1924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageUrl = `/uploads/photos/${objectId}`;
           }
         } else {
-          // Use local filesystem (works on Railway and other platforms)
+          // Use local filesystem as fallback
           console.log("Using local filesystem for building image");
           const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
           if (!fs.existsSync(uploadsDir)) {
