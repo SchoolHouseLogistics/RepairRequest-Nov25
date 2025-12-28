@@ -139,6 +139,21 @@ export default function HeroLanding() {
               </div>
             </div>
           </div>
+
+          {/* Demo Video */}
+          <div className="mt-16 max-w-4xl mx-auto">
+            <div className="aspect-video bg-gradient-to-br from-blue-100 to-indigo-200 rounded-2xl shadow-2xl overflow-hidden">
+              <iframe
+                className="w-full h-full"
+                src="https://www.youtube-nocookie.com/embed/7aViuHFvP38?si=d8CfK23meqoBij0t&rel=0"
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
         </div>
       </section>
 

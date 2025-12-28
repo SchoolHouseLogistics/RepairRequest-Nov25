@@ -23,7 +23,7 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: ["'self'", "https://accounts.google.com", "https://api.zeptomail.com", "https://calendly.com", "https://storage.googleapis.com"],
-      frameSrc: ["'self'", "https://accounts.google.com", "https://calendly.com", "https://www.youtube.com", "https://youtube.com"],
+      frameSrc: ["'self'", "https://accounts.google.com", "https://calendly.com", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com"],
       frameAncestors: isProduction ? ["'self'", "https://*.replit.dev", "https://*.replit.app"] : ["'self'", "http://localhost:*", "https://*.replit.dev"],
     },
   },
