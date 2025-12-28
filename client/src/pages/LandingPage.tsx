@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3, Calendar, GraduationCap, Home, FileText, QrCode, Smartphone, Wrench, ClipboardCheck, DollarSign, TrendingUp, Scale, Eye, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
-import luxuryCondoPath from "@assets/generated_images/Luxury_condo_building_exterior_4205c12c.png";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import { Helmet } from "react-helmet-async";
 import PublicHeader from "@/components/layout/PublicHeader";
@@ -11,7 +12,107 @@ import PublicFooter from "@/components/PublicFooter";
 import CalendlyWidget from "@/components/CalendlyWidget";
 import ContactForm from "@/components/ContactForm";
 
+type AudienceType = "schools" | "property-managers";
+
+const schoolsAddOns = [
+  {
+    icon: BarChart3,
+    title: "Advanced Reporting & Analytics",
+    description: "Gain insight into maintenance activity with resolution times, recurring issue tracking, and exportable reports to support planning and budgeting."
+  },
+  {
+    icon: Building2,
+    title: "Multi-Campus / District Management",
+    description: "Manage multiple campuses under one account with campus-level dashboards, district-wide visibility, and role-based access controls."
+  },
+  {
+    icon: Wrench,
+    title: "Vendor & Contractor Access",
+    description: "Assign work orders to external service providers while maintaining full visibility into progress and completion."
+  },
+  {
+    icon: Smartphone,
+    title: "Mobile Technician Tools",
+    description: "Enable facilities teams to update work orders, upload photos, and manage requests directly from their phones."
+  },
+  {
+    icon: QrCode,
+    title: "QR Code Room & Asset Tagging",
+    description: "Allow staff to scan a QR code in any room or on equipment to instantly submit a pre-filled maintenance request."
+  },
+  {
+    icon: Settings,
+    title: "Custom Forms & Workflow Rules",
+    description: "Customize intake forms and approval workflows to match internal policies and department-specific needs."
+  },
+  {
+    icon: FileText,
+    title: "Maintenance History & Asset Records",
+    description: "Maintain long-term records of repairs and service history to support audits, compliance, and capital planning."
+  },
+  {
+    icon: DollarSign,
+    title: "Stripe Payments & Chargebacks",
+    description: "Enable secure online payments for billable maintenance, damage charges, or after-hours work. Payments tie directly to work orders with receipts and tracking."
+  }
+];
+
+const propertyManagerAddOns = [
+  {
+    icon: Users,
+    title: "Tenant Maintenance Portal",
+    description: "Let tenants submit maintenance requests with photos and unit selection, reducing calls, texts, and confusion."
+  },
+  {
+    icon: FileText,
+    title: "Lease-Aware Request Rules",
+    description: "Flag billable vs non-billable issues and document responsibility to reduce disputes and enforce lease policies."
+  },
+  {
+    icon: DollarSign,
+    title: "Cost Tracking & Chargebacks",
+    description: "Track labor and materials per unit and generate clean records for reimbursements and tenant chargebacks."
+  },
+  {
+    icon: Building2,
+    title: "Multi-Property Portfolio Management",
+    description: "Manage multiple properties with property-level dashboards, portfolio reporting, and role-based access for managers."
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Inspection & Turnover Tools",
+    description: "Move-in and move-out inspection checklists with photos that automatically generate repair tasks and timelines."
+  },
+  {
+    icon: Clock,
+    title: "SLA & Response-Time Tracking",
+    description: "Measure response and resolution performance, separate emergency vs routine issues, and stay compliant."
+  },
+  {
+    icon: Wrench,
+    title: "Vendor Dispatch & Invoicing",
+    description: "Assign vendors, confirm completion, and upload/approve invoices with a clear maintenance paper trail."
+  },
+  {
+    icon: TrendingUp,
+    title: "Property Health Analytics",
+    description: "Spot high-cost units, recurring issues, and preventative maintenance opportunities to protect asset value."
+  },
+  {
+    icon: Scale,
+    title: "Legal & Compliance Documentation",
+    description: "Timestamped logs, photos, and communication history for audits, disputes, and insurance claims."
+  },
+  {
+    icon: DollarSign,
+    title: "Stripe Payments & Chargebacks",
+    description: "Collect tenant payments for billable repairs or damages directly from work orders with automatic receipts and payment tracking."
+  }
+];
+
 export default function LandingPage() {
+  const [audience, setAudience] = useState<AudienceType>("schools");
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
@@ -34,8 +135,8 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm sm:text-base font-medium text-left">
-                🎉 Try RepairRequest Free for 30 Days! 
-                <span className="hidden sm:inline ml-2">• No credit card required • Full access to all features • Cancel anytime</span>
+                Try RepairRequest Free for 30 Days! 
+                <span className="hidden sm:inline ml-2">No credit card required. Full access to all features. Cancel anytime.</span>
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -117,7 +218,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Features Section - Why Choose RepairRequest */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -132,8 +233,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <Card className="border-0 shadow-lg">
               <CardHeader>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 hover:shadow-md hover:scale-110 transition-all duration-300">
-                  <Building2 className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:animate-bounce transition-colors duration-300" />
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                  <Building2 className="h-6 w-6 text-blue-600" />
                 </div>
                 <CardTitle>Multi-Building Support</CardTitle>
                 <CardDescription>
@@ -144,8 +245,8 @@ export default function LandingPage() {
 
             <Card className="border-0 shadow-lg">
               <CardHeader>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 hover:shadow-md hover:scale-110 transition-all duration-300">
-                  <Users className="h-6 w-6 text-green-600 hover:text-green-700 hover:animate-bounce transition-colors duration-300" />
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="h-6 w-6 text-green-600" />
                 </div>
                 <CardTitle>Role-Based Access</CardTitle>
                 <CardDescription>
@@ -156,8 +257,8 @@ export default function LandingPage() {
 
             <Card className="border-0 shadow-lg">
               <CardHeader>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 hover:shadow-md hover:scale-110 transition-all duration-300">
-                  <Clock className="h-6 w-6 text-purple-600 hover:text-purple-700 hover:animate-bounce transition-colors duration-300" />
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                  <Clock className="h-6 w-6 text-purple-600" />
                 </div>
                 <CardTitle>Real-Time Tracking</CardTitle>
                 <CardDescription>
@@ -168,8 +269,8 @@ export default function LandingPage() {
 
             <Card className="border-0 shadow-lg">
               <CardHeader>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4 hover:shadow-md hover:scale-110 transition-all duration-300">
-                  <Mail className="h-6 w-6 text-orange-600 hover:text-orange-700 hover:animate-bounce transition-colors duration-300" />
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+                  <Mail className="h-6 w-6 text-orange-600" />
                 </div>
                 <CardTitle>Email Notifications</CardTitle>
                 <CardDescription>
@@ -180,8 +281,8 @@ export default function LandingPage() {
 
             <Card className="border-0 shadow-lg">
               <CardHeader>
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4 hover:shadow-md hover:scale-110 transition-all duration-300">
-                  <Shield className="h-6 w-6 text-red-600 hover:text-red-700 hover:animate-bounce transition-colors duration-300" />
+                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="h-6 w-6 text-red-600" />
                 </div>
                 <CardTitle>Priority Management</CardTitle>
                 <CardDescription>
@@ -192,8 +293,8 @@ export default function LandingPage() {
 
             <Card className="border-0 shadow-lg">
               <CardHeader>
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4 hover:shadow-md hover:scale-110 transition-all duration-300">
-                  <BarChart3 className="h-6 w-6 text-indigo-600 hover:text-indigo-700 hover:animate-bounce transition-colors duration-300" />
+                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                  <BarChart3 className="h-6 w-6 text-indigo-600" />
                 </div>
                 <CardTitle>Analytics & Reporting</CardTitle>
                 <CardDescription>
@@ -205,96 +306,173 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Industries Section */}
-      <section className="py-20 bg-gray-50">
+      {/* Audience Toggle Section */}
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Trusted Across Industries
+              Built for Your Industry
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              RepairRequest serves diverse property management needs across multiple sectors
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+              See how RepairRequest fits your specific needs
             </p>
+            
+            {/* Audience Toggle */}
+            <div 
+              className="inline-flex bg-white rounded-lg p-1 shadow-md border"
+              role="tablist"
+              aria-label="Select your industry"
+            >
+              <button
+                role="tab"
+                aria-selected={audience === "schools"}
+                aria-controls="schools-content"
+                id="schools-tab"
+                onClick={() => setAudience("schools")}
+                className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
+                  audience === "schools"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+                data-testid="toggle-schools"
+              >
+                <GraduationCap className="h-5 w-5" />
+                Schools
+              </button>
+              <button
+                role="tab"
+                aria-selected={audience === "property-managers"}
+                aria-controls="property-managers-content"
+                id="property-managers-tab"
+                onClick={() => setAudience("property-managers")}
+                className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
+                  audience === "property-managers"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+                data-testid="toggle-property-managers"
+              >
+                <Home className="h-5 w-5" />
+                Property Managers
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="text-center border-0 shadow-lg">
-              <CardContent className="pt-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 hover:shadow-lg hover:scale-110 transition-all duration-300">
-                  <Building2 className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:animate-pulse transition-colors duration-300" />
+          {/* Audience-Specific Content */}
+          <div 
+            id={`${audience}-content`}
+            role="tabpanel"
+            aria-labelledby={`${audience}-tab`}
+            className="max-w-4xl mx-auto"
+          >
+            {audience === "schools" ? (
+              <div className="text-center">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  Maintenance Requests, Without the Chaos.
+                </h3>
+                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                  RepairRequest helps schools submit, prioritize, and track work orders—without emails, paper forms, or PDF backups.
+                </p>
+                <div className="space-y-4 max-w-md mx-auto text-left mb-8">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Submit requests in seconds</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Track status from request to completion</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Keep teachers, admins, and facilities teams aligned</span>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Educational Institutions</h3>
-                <p className="text-gray-600 text-sm">Schools, universities, and educational facilities</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center border-0 shadow-lg">
-              <CardContent className="pt-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 hover:shadow-lg hover:scale-110 transition-all duration-300">
-                  <BarChart3 className="h-8 w-8 text-green-600 hover:text-green-700 hover:animate-pulse transition-colors duration-300" />
+                <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                    Learn What's Possible
+                  </Button>
+                </a>
+              </div>
+            ) : (
+              <div className="text-center">
+                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  Work Orders That Keep Tenants and Teams Aligned.
+                </h3>
+                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                  RepairRequest helps landlords and property managers capture issues fast, assign work, track progress, and document everything—across units and properties.
+                </p>
+                <div className="space-y-4 max-w-md mx-auto text-left mb-8">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Tenant-friendly issue reporting</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Portfolio-wide visibility</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Clear documentation for chargebacks and compliance</span>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Commercial Real Estate</h3>
-                <p className="text-gray-600 text-sm">Office buildings, retail spaces, and commercial properties</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center border-0 shadow-lg">
-              <CardContent className="pt-6">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 hover:shadow-lg hover:scale-110 transition-all duration-300">
-                  <Users className="h-8 w-8 text-purple-600 hover:text-purple-700 hover:animate-pulse transition-colors duration-300" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Residential Communities</h3>
-                <p className="text-gray-600 text-sm">HOAs, apartment complexes, and residential properties</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center border-0 shadow-lg">
-              <CardContent className="pt-6">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 hover:shadow-lg hover:scale-110 transition-all duration-300">
-                  <Shield className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:animate-pulse transition-colors duration-300" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Property Management</h3>
-                <p className="text-gray-600 text-sm">Professional property management companies</p>
-              </CardContent>
-            </Card>
+                <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                    Learn What's Possible
+                  </Button>
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* Optional Add-Ons Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Built for Modern Property Management
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                RepairRequest understands the unique challenges of maintaining facilities across different industries. Our platform adapts to your specific needs while ensuring efficient operations.
-              </p>
-              
-              <div className="space-y-4">
-                {[
-                  "Reduce response times for critical repairs",
-                  "Improve communication between staff and maintenance",
-                  "Maintain detailed records for compliance and reporting",
-                  "Streamline budget planning with comprehensive analytics",
-                  "Enhance safety through proactive maintenance tracking"
-                ].map((benefit, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 hover:text-green-700 hover:scale-125 hover:drop-shadow-md transition-all duration-300" />
-                    <span className="text-gray-700">{benefit}</span>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Optional Add-Ons
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              RepairRequest is intentionally simple from day one. Add these upgrades only when you need more scale, visibility, and control.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(audience === "schools" ? schoolsAddOns : propertyManagerAddOns).map((addon, index) => (
+              <Card key={index} className="border shadow-md relative" data-testid={`addon-card-${index}`}>
+                <CardHeader>
+                  <Badge className="absolute top-4 right-4 bg-blue-100 text-blue-800 hover:bg-blue-100">
+                    Optional Add-On
+                  </Badge>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                    <addon.icon className="h-6 w-6 text-blue-600" />
                   </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="rounded-2xl shadow-xl overflow-hidden">
-              <img 
-                src={luxuryCondoPath} 
-                alt="Modern luxury residential condominium" 
-                className="w-full h-full object-cover"
-              />
+                  <CardTitle className="text-lg pr-24">{addon.title}</CardTitle>
+                  <CardDescription className="text-sm">
+                    {addon.description}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          {/* CTA Below Add-Ons */}
+          <div className="text-center mt-16">
+            <p className="text-xl text-gray-700 mb-6 font-medium">
+              Start simple. Add power when you're ready.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/login">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                  Get Started Today
+                </Button>
+              </Link>
+              <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
+                <Button size="lg" variant="outline">
+                  Learn What's Possible
+                </Button>
+              </a>
             </div>
           </div>
         </div>
@@ -308,7 +486,7 @@ export default function LandingPage() {
             {/* Schedule a Meeting - Calendly Widget */}
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="flex items-center mb-6">
-                <Calendar className="h-8 w-8 text-blue-600 mr-3 hover:text-blue-700 hover:scale-110 hover:drop-shadow-md transition-all duration-300" />
+                <Calendar className="h-8 w-8 text-blue-600 mr-3" />
                 <h2 className="text-2xl font-bold text-gray-900">Schedule a Meeting</h2>
               </div>
               <p className="text-gray-600 mb-6">
@@ -322,7 +500,7 @@ export default function LandingPage() {
             {/* Get In Touch - Contact Form */}
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <div className="flex items-center mb-6">
-                <Mail className="h-8 w-8 text-blue-600 mr-3 hover:text-blue-700 hover:scale-110 hover:drop-shadow-md transition-all duration-300" />
+                <Mail className="h-8 w-8 text-blue-600 mr-3" />
                 <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
               </div>
               <p className="text-gray-600 mb-6">
