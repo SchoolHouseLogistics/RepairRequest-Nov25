@@ -144,6 +144,10 @@ Changelog:
 - December 19, 2025: Fixed image storage for Railway deployments - now uses AWS S3 when not in Replit environment
 - December 19, 2025: Added S3 image proxy endpoint (/api/s3-proxy) to serve private S3 images securely
 - December 19, 2025: Updated Dashboard and AdminBuildingsFacilities to use S3 proxy for image display
+- December 28, 2025: Added audience toggle (Schools / Property Managers) to landing page with audience-specific content
+- December 28, 2025: Created Optional Add-Ons section with 8 school-specific and 10 property manager-specific add-on cards
+- December 28, 2025: Removed "Trusted Across Industries" and "Built for Modern Property Management" sections from landing page
+- December 28, 2025: Added ARIA-compliant toggle with keyboard navigation support
 ```
 
 ## User Preferences
