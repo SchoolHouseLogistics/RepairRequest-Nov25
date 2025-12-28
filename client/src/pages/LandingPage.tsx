@@ -98,21 +98,14 @@ export default function LandingPage() {
             {/* Right Video */}
             <div className="relative">
               <div className="aspect-video bg-gradient-to-br from-blue-100 to-indigo-200 rounded-2xl shadow-2xl overflow-hidden">
-                {/* Placeholder for video - you can replace this with actual video component */}
-                <div className="w-full h-full flex items-center justify-center bg-gray-900 relative">
-                  <div className="text-center text-white">
-                    <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 cursor-pointer hover:bg-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-300">
-                      <svg className="w-8 h-8 ml-1 hover:animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">See RepairRequest in Action</h3>
-                    <p className="text-gray-300 text-sm">Watch how easy it is to manage maintenance requests</p>
-                  </div>
-                  
-                  {/* Video overlay effect */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </div>
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/7aViuHFvP38?rel=0"
+                  title="RepairRequest Demo Video"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                ></iframe>
               </div>
               
               {/* Decorative elements */}
