@@ -144,12 +144,6 @@ Changelog:
 - December 19, 2025: Fixed image storage for Railway deployments - now uses AWS S3 when not in Replit environment
 - December 19, 2025: Added S3 image proxy endpoint (/api/s3-proxy) to serve private S3 images securely
 - December 19, 2025: Updated Dashboard and AdminBuildingsFacilities to use S3 proxy for image display
-- December 28, 2025: Cleaned out New School (org ID 2) database - deleted 9 requests and all related records
-- December 28, 2025: Major landing page redesign with dual audience support (Schools / Property Managers)
-- December 28, 2025: Added segmented control toggle for audience selection with ARIA accessibility
-- December 28, 2025: Audience-specific hero copy, bullet points, and "Built for" badge
-- December 28, 2025: New Optional Add-Ons section with 8 school add-ons and 10 property manager add-ons
-- December 28, 2025: Audience-specific benefits section with dynamic content switching
 ```
 
 ## User Preferences
