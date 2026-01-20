@@ -974,6 +974,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes
   app.get('/api/auth/user', async (req: any, res) => {
+    // Prevent caching of auth state
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       console.log("=== /api/auth/user endpoint ===");
 
@@ -2856,8 +2861,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   app.get('/api/logout', (req, res) => {
-    req.session.destroy(() => {
-      res.clearCookie('connect.sid'); // This removes the session cookie from browser
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Session destroy error:', err);
+      }
+      
+      // Clear cookie with same options it was set with
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'lax'
+      });
+      
+      // Set cache control headers to prevent caching
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      
       res.json({ message: "Logged out" });
     });
   });
