@@ -10,6 +10,7 @@ import {
   organizations,
   buildings,
   facilities,
+  passwordResetTokens,
   type User,
   type UpsertUser,
   type InsertRequest,
@@ -33,6 +34,7 @@ import {
   type Facility,
   type InsertFacility,
 } from "@shared/schema";
+import crypto from 'crypto';
 import { db } from "./db";
 import { eq, and, desc, count, sql, or, isNull, asc } from "drizzle-orm";
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -194,11 +196,15 @@ export interface IStorage {
   
   // Reports
   getReportsData(reportType: string, organizationId?: number): Promise<any>;
-  
+
   // Email notifications
   getOrganizationAdminEmails(organizationId: number): Promise<string[]>;
-  
 
+  // Password reset
+  createPasswordResetToken(userId: string): Promise<{ token: string; expiresAt: Date }>;
+  validatePasswordResetToken(token: string): Promise<{ valid: boolean; userId?: string }>;
+  usePasswordResetToken(token: string): Promise<boolean>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -619,50 +625,45 @@ export class DatabaseStorage implements IStorage {
   
   async getUserRequestsByStatus(userId: string, status?: string): Promise<any[]> {
     try {
-      // First, get basic request data
-      let queryBuilder = db
+      // Use a single query with LEFT JOINs to avoid N+1 queries
+      // Join requests -> assignments -> assignee (users)
+      const conditions = [eq(requests.requestorId, userId)];
+      if (status) {
+        conditions.push(eq(requests.status, status));
+      }
+
+      const results = await db
         .select({
-          request: requests
+          request: requests,
+          assigneeId: assignments.assigneeId,
+          assigneeFirstName: sql<string>`assignee.first_name`,
+          assigneeLastName: sql<string>`assignee.last_name`,
+          assigneeProfileImage: sql<string>`assignee.profile_image_url`,
         })
         .from(requests)
-        .where(eq(requests.requestorId, userId));
-      
-      if (status) {
-        queryBuilder = queryBuilder.where(eq(requests.status, status));
-      }
-      
-      const results = await queryBuilder.orderBy(desc(requests.updatedAt));
-      
-      // For each request, get assignment data separately if needed
-      const requestsWithAssignees = await Promise.all(
-        results.map(async (item) => {
-          // Get assignment info if it exists
-          const assignmentData = await db
-            .select({
-              assignment: assignments,
-              assignee: users
-            })
-            .from(assignments)
-            .leftJoin(users, eq(users.id, assignments.assigneeId))
-            .where(eq(assignments.requestId, item.request.id))
-            .limit(1);
-            
-          const assigneeData = assignmentData.length > 0 && assignmentData[0].assignee 
-            ? {
-                id: assignmentData[0].assignee.id,
-                name: `${assignmentData[0].assignee.firstName || ''} ${assignmentData[0].assignee.lastName || ''}`.trim(),
-                profileImageUrl: assignmentData[0].assignee.profileImageUrl
-              } 
-            : null;
-            
-          return {
-            ...item.request,
-            assignee: assigneeData
-          };
-        })
-      );
-      
-      return requestsWithAssignees;
+        .leftJoin(assignments, eq(assignments.requestId, requests.id))
+        .leftJoin(
+          sql`users as assignee`,
+          sql`assignee.id = ${assignments.assigneeId}`
+        )
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+        .orderBy(desc(requests.updatedAt));
+
+      // Format the results
+      return results.map((item) => {
+        const assigneeData = item.assigneeId
+          ? {
+              id: item.assigneeId,
+              name: `${item.assigneeFirstName || ''} ${item.assigneeLastName || ''}`.trim(),
+              profileImageUrl: item.assigneeProfileImage
+            }
+          : null;
+
+        return {
+          ...item.request,
+          assignee: assigneeData
+        };
+      });
     } catch (error) {
       console.error("Error fetching user requests by status:", error);
       return [];
@@ -671,16 +672,8 @@ export class DatabaseStorage implements IStorage {
   
   async getAllRequestsByStatus(status?: string, organizationId?: number): Promise<any[]> {
     try {
-      // First get the basic request data with requestors
-      let queryBuilder = db
-        .select({
-          request: requests,
-          requestor: users
-        })
-        .from(requests)
-        .leftJoin(users, eq(users.id, requests.requestorId));
-      
-      // Build where conditions
+      // Use a single query with LEFT JOINs to avoid N+1 queries
+      // Join requests -> requestor (users) -> assignments -> assignee (users)
       const conditions = [];
       if (status) {
         conditions.push(eq(requests.status, status));
@@ -688,52 +681,57 @@ export class DatabaseStorage implements IStorage {
       if (organizationId) {
         conditions.push(eq(requests.organizationId, organizationId));
       }
-      
-      if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
-      }
-      
-      const results = await queryBuilder.orderBy(desc(requests.updatedAt));
-      
-      // For each request, get assignment data separately
-      const enrichedRequests = await Promise.all(
-        results.map(async (item) => {
-          // Get assignment info if it exists
-          const assignmentData = await db
-            .select({
-              assignment: assignments,
-              assignee: users
-            })
-            .from(assignments)
-            .leftJoin(users, eq(users.id, assignments.assigneeId))
-            .where(eq(assignments.requestId, item.request.id))
-            .limit(1);
-            
-          // Format the requestor info
-          const requestorInfo = item.requestor ? {
-            id: item.requestor.id,
-            name: `${item.requestor.firstName || ''} ${item.requestor.lastName || ''}`.trim(),
-            email: item.requestor.email
-          } : null;
-          
-          // Format the assignee info if available
-          const assigneeInfo = assignmentData.length > 0 && assignmentData[0].assignee 
-            ? {
-                id: assignmentData[0].assignee.id,
-                name: `${assignmentData[0].assignee.firstName || ''} ${assignmentData[0].assignee.lastName || ''}`.trim(),
-                profileImageUrl: assignmentData[0].assignee.profileImageUrl
-              } 
-            : null;
-            
-          return {
-            ...item.request,
-            requestor: requestorInfo,
-            assignee: assigneeInfo
-          };
+
+      let query = db
+        .select({
+          request: requests,
+          requestorId: users.id,
+          requestorFirstName: users.firstName,
+          requestorLastName: users.lastName,
+          requestorEmail: users.email,
+          assigneeId: assignments.assigneeId,
+          assigneeFirstName: sql<string>`assignee.first_name`,
+          assigneeLastName: sql<string>`assignee.last_name`,
+          assigneeProfileImage: sql<string>`assignee.profile_image_url`,
         })
-      );
-      
-      return enrichedRequests;
+        .from(requests)
+        .leftJoin(users, eq(users.id, requests.requestorId))
+        .leftJoin(assignments, eq(assignments.requestId, requests.id))
+        .leftJoin(
+          sql`users as assignee`,
+          sql`assignee.id = ${assignments.assigneeId}`
+        );
+
+      if (conditions.length > 0) {
+        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+      }
+
+      const results = await query.orderBy(desc(requests.updatedAt));
+
+      // Format the results
+      return results.map((item) => {
+        const requestorInfo = item.requestorId
+          ? {
+              id: item.requestorId,
+              name: `${item.requestorFirstName || ''} ${item.requestorLastName || ''}`.trim(),
+              email: item.requestorEmail
+            }
+          : null;
+
+        const assigneeInfo = item.assigneeId
+          ? {
+              id: item.assigneeId,
+              name: `${item.assigneeFirstName || ''} ${item.assigneeLastName || ''}`.trim(),
+              profileImageUrl: item.assigneeProfileImage
+            }
+          : null;
+
+        return {
+          ...item.request,
+          requestor: requestorInfo,
+          assignee: assigneeInfo
+        };
+      });
     } catch (error) {
       console.error("Error fetching all requests by status:", error);
       return [];
@@ -742,64 +740,45 @@ export class DatabaseStorage implements IStorage {
   
   async getAssignedRequests(userId: string): Promise<any[]> {
     try {
-      // First verify the user exists
-      const assigneeResult = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      
-      if (!assigneeResult.length) {
-        console.error(`User with ID ${userId} not found`);
-        return [];
-      }
-      
-      // Get all assignments for this user first
-      const assignmentResults = await db
-        .select()
-        .from(assignments)
-        .where(eq(assignments.assigneeId, userId));
-      
-      if (!assignmentResults.length) {
-        return []; // No assignments found
-      }
-      
-      // Get details for each assigned request
-      const assignedRequests = await Promise.all(
-        assignmentResults.map(async (assignment) => {
-          // Get the request details
-          const [requestData] = await db
-            .select({
-              request: requests,
-              requestor: users
-            })
-            .from(requests)
-            .leftJoin(users, eq(users.id, requests.requestorId))
-            .where(eq(requests.id, assignment.requestId));
-          
-          if (!requestData) {
-            return null; // Skip if request not found
-          }
-          
-          // Format the response
-          return {
-            ...requestData.request,
-            requestor: requestData.requestor ? {
-              id: requestData.requestor.id,
-              name: `${requestData.requestor.firstName || ''} ${requestData.requestor.lastName || ''}`.trim(),
-              email: requestData.requestor.email
-            } : null,
-            assignment: assignment
-          };
+      // Use a single query with JOINs to avoid N+1 queries
+      // Join assignments -> requests -> requestor (users)
+      const results = await db
+        .select({
+          request: requests,
+          requestorId: users.id,
+          requestorFirstName: users.firstName,
+          requestorLastName: users.lastName,
+          requestorEmail: users.email,
+          assignmentId: assignments.id,
+          assignedAt: assignments.assignedAt,
+          internalNotes: assignments.internalNotes,
         })
-      );
-      
-      // Remove any null entries and sort by updatedAt
-      return assignedRequests
-        .filter(request => request !== null)
-        .sort((a, b) => 
-          new Date(b!.updatedAt).getTime() - new Date(a!.updatedAt).getTime()
-        );
+        .from(assignments)
+        .innerJoin(requests, eq(requests.id, assignments.requestId))
+        .leftJoin(users, eq(users.id, requests.requestorId))
+        .where(eq(assignments.assigneeId, userId))
+        .orderBy(desc(requests.updatedAt));
+
+      // Format the results
+      return results.map((item) => {
+        const requestorInfo = item.requestorId
+          ? {
+              id: item.requestorId,
+              name: `${item.requestorFirstName || ''} ${item.requestorLastName || ''}`.trim(),
+              email: item.requestorEmail
+            }
+          : null;
+
+        return {
+          ...item.request,
+          requestor: requestorInfo,
+          assignment: {
+            id: item.assignmentId,
+            assignedAt: item.assignedAt,
+            internalNotes: item.internalNotes,
+          }
+        };
+      });
     } catch (error) {
       console.error("Error fetching assigned requests:", error);
       return [];
@@ -1341,7 +1320,7 @@ export class DatabaseStorage implements IStorage {
   async getOrganizationAdminEmails(organizationId: number): Promise<string[]> {
     try {
       console.log("Getting admin emails for organization:", organizationId);
-      
+
       const adminUsers = await db
         .select({ email: users.email })
         .from(users)
@@ -1354,15 +1333,88 @@ export class DatabaseStorage implements IStorage {
             )
           )
         );
-      
+
       const emails = adminUsers.map(user => user.email).filter(email => email !== null);
       console.log("Found admin emails:", emails);
-      
+
       return emails;
     } catch (error) {
       console.error("Error getting organization admin emails:", error);
       return [];
     }
+  }
+
+  // Password reset functions
+  async createPasswordResetToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
+    // Generate a secure random token
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // Token expires in 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Delete any existing tokens for this user
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+
+    // Insert the new token
+    await db.insert(passwordResetTokens).values({
+      userId,
+      token,
+      expiresAt,
+    });
+
+    return { token, expiresAt };
+  }
+
+  async validatePasswordResetToken(token: string): Promise<{ valid: boolean; userId?: string }> {
+    const [result] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          isNull(passwordResetTokens.usedAt)
+        )
+      )
+      .limit(1);
+
+    if (!result) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (new Date() > result.expiresAt) {
+      return { valid: false };
+    }
+
+    return { valid: true, userId: result.userId };
+  }
+
+  async usePasswordResetToken(token: string): Promise<boolean> {
+    const result = await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          isNull(passwordResetTokens.usedAt)
+        )
+      )
+      .returning();
+
+    return result.length > 0;
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return result.length > 0;
   }
 }
 

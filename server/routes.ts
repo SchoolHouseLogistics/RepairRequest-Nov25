@@ -84,41 +84,202 @@ const bulkSchema = z.array(
   })
 );
 
+// Building validation schemas
+const createBuildingSchema = z.object({
+  organizationId: z.number({ required_error: "Organization ID is required" }),
+  name: z.string().min(1, "Building name is required").max(255),
+  address: z.string().max(500).optional(),
+  description: z.string().max(1000).optional(),
+  roomNumbers: z.union([
+    z.array(z.string()),
+    z.string().transform(s => s ? s.split(',').map(r => r.trim()).filter(Boolean) : [])
+  ]).optional().default([]),
+}).strict();
+
+const updateBuildingSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  address: z.string().max(500).nullable().optional(),
+  description: z.string().max(1000).nullable().optional(),
+  roomNumbers: z.union([
+    z.array(z.string()),
+    z.string().transform(s => s ? s.split(',').map(r => r.trim()).filter(Boolean) : [])
+  ]).optional(),
+  isActive: z.boolean().optional(),
+}).strict();
+
+// Facility validation schemas
+const createFacilitySchema = z.object({
+  organizationId: z.number({ required_error: "Organization ID is required" }),
+  name: z.string().min(1, "Facility name is required").max(255),
+  description: z.string().max(1000).optional(),
+  category: z.string().max(100).optional(),
+  availableItems: z.any().optional(), // JSON field
+  isActive: z.boolean().optional().default(true),
+  sortOrder: z.number().optional(),
+}).strict();
+
+const updateFacilitySchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().max(1000).nullable().optional(),
+  category: z.string().max(100).nullable().optional(),
+  availableItems: z.any().optional(), // JSON field
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().optional(),
+}).strict();
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
 });
 
+/**
+ * Get the default organization ID for new user signups.
+ * Uses environment variable DEFAULT_ORGANIZATION_ID if set,
+ * otherwise falls back to the first active organization.
+ * Returns undefined if no organizations exist (requires manual assignment).
+ */
+async function getDefaultOrganizationId(): Promise<number | undefined> {
+  // Check environment variable first
+  const envOrgId = process.env.DEFAULT_ORGANIZATION_ID;
+  if (envOrgId) {
+    const orgId = parseInt(envOrgId, 10);
+    if (!isNaN(orgId)) {
+      // Verify the organization exists
+      const org = await dbStorage.getOrganization(orgId);
+      if (org) {
+        return orgId;
+      }
+      console.warn(`DEFAULT_ORGANIZATION_ID ${orgId} not found in database, falling back to first org`);
+    }
+  }
+
+  // Fallback: get the first organization
+  const orgs = await dbStorage.getAllOrganizations();
+  if (orgs && orgs.length > 0) {
+    return orgs[0].id;
+  }
+
+  // No organizations exist - new users will need manual org assignment
+  console.warn("No organizations found in database - new users will have no organization assigned");
+  return undefined;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
 
-  // Forgot password endpoint
-
-
+  // Forgot password - request password reset
   app.post("/api/forgot-password", async (req, res) => {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ status: "error", error: { message: "Email is required" } });
     }
+
     try {
       const user = await dbStorage.getUserByEmail(email);
+
+      // Always return success to prevent email enumeration attacks
       if (!user) {
-        return res.status(404).json({ status: "error", error: { message: "User not found" } });
+        console.log(`Password reset requested for non-existent email: ${email}`);
+        return res.json({ status: "success", message: "If an account exists with this email, a reset link has been sent." });
       }
 
-      // Actually send the email
+      // Generate password reset token
+      const { token, expiresAt } = await dbStorage.createPasswordResetToken(user.id);
+
+      // Build the reset URL
+      const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const protocol = req.get('x-forwarded-proto') || 'https';
+      const resetUrl = `${protocol}://${host}/reset-password?token=${token}`;
+
+      // Send the email
       const emailSent = await sendEmail({
-        to: user.email,
+        to: user.email!,
         from: process.env.FROM_EMAIL || "noreply@schoolhouselogistics.com",
-        subject: "Password Reset Request",
-        text: `Hello,\n\nYou requested a password reset. If this was you, click the link below to reset your password. If not, you can ignore this email.\n\n[Reset Link Here]`,
-        html: `<p>Hello,</p><p>You requested a password reset. If this was you, click the link below to reset your password. If not, you can ignore this email.</p><p><a href='#'>Reset Password</a></p>`
+        subject: "Password Reset Request - RepairRequest",
+        text: `Hello ${user.firstName || ''},\n\nYou requested a password reset for your RepairRequest account.\n\nClick the link below to reset your password (valid for 1 hour):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe RepairRequest Team`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Password Reset Request</h2>
+            <p>Hello ${user.firstName || ''},</p>
+            <p>You requested a password reset for your RepairRequest account.</p>
+            <p>Click the button below to reset your password (valid for 1 hour):</p>
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Reset Password</a>
+            </p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #666;">${resetUrl}</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #999; font-size: 12px;">If you didn't request this password reset, you can safely ignore this email.</p>
+          </div>
+        `
       });
 
       if (!emailSent) {
-        return res.status(500).json({ status: "error", error: { message: "Failed to send email" } });
+        console.error("Failed to send password reset email to:", user.email);
+        return res.status(500).json({ status: "error", error: { message: "Failed to send reset email. Please try again later." } });
       }
 
-      return res.json({ status: "success", data: undefined });
+      console.log(`Password reset email sent to ${user.email}, expires at ${expiresAt}`);
+      return res.json({ status: "success", message: "If an account exists with this email, a reset link has been sent." });
     } catch (err) {
+      console.error("Password reset error:", err);
+      return res.status(500).json({ status: "error", error: { message: "Internal server error" } });
+    }
+  });
+
+  // Validate password reset token
+  app.get("/api/reset-password/validate", async (req, res) => {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ valid: false, error: "Token is required" });
+    }
+
+    try {
+      const { valid } = await dbStorage.validatePasswordResetToken(token);
+      return res.json({ valid });
+    } catch (err) {
+      console.error("Token validation error:", err);
+      return res.status(500).json({ valid: false, error: "Internal server error" });
+    }
+  });
+
+  // Reset password with token
+  app.post("/api/reset-password", async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ status: "error", error: { message: "Token and new password are required" } });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ status: "error", error: { message: "Password must be at least 8 characters long" } });
+    }
+
+    try {
+      // Validate the token
+      const { valid, userId } = await dbStorage.validatePasswordResetToken(token);
+
+      if (!valid || !userId) {
+        return res.status(400).json({ status: "error", error: { message: "Invalid or expired reset token" } });
+      }
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update the user's password
+      const updated = await dbStorage.updateUserPassword(userId, hashedPassword);
+
+      if (!updated) {
+        return res.status(500).json({ status: "error", error: { message: "Failed to update password" } });
+      }
+
+      // Mark the token as used
+      await dbStorage.usePasswordResetToken(token);
+
+      console.log(`Password successfully reset for user ${userId}`);
+      return res.json({ status: "success", message: "Password has been reset successfully" });
+    } catch (err) {
+      console.error("Password reset error:", err);
       return res.status(500).json({ status: "error", error: { message: "Internal server error" } });
     }
   });
@@ -265,10 +426,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/?error=no_email");
       }
 
-      // Find or create user - assign new users to New School (org ID 2) by default
-      const DEFAULT_ORGANIZATION_ID = 2; // New School
+      // Find or create user
       let user = await dbStorage.getUserByEmail(profile.email);
       if (!user) {
+        // Get default organization for new users
+        const defaultOrgId = await getDefaultOrganizationId();
+
         // Create new user using upsertUser
         const userData = {
           id: profile.id,
@@ -276,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: profile.given_name || '',
           lastName: profile.family_name || '',
           role: 'requester' as const,
-          organizationId: DEFAULT_ORGANIZATION_ID,
+          organizationId: defaultOrgId,
           profileImageUrl: profile.picture || null,
         };
         user = await dbStorage.upsertUser(userData);
@@ -654,24 +817,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
-      // Ensure roomNumbers is always an array
-      let roomNumbers = [];
-      if (Array.isArray(req.body.roomNumbers)) {
-        roomNumbers = req.body.roomNumbers;
-      } else if (typeof req.body.roomNumbers === 'string' && req.body.roomNumbers.trim() !== '') {
-        roomNumbers = req.body.roomNumbers.split(',').map((s: string) => s.trim());
+      // Validate input with Zod schema
+      const parseResult = createBuildingSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "Invalid building data",
+          errors: parseResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
       }
+
+      const validatedData = parseResult.data;
       const buildingData = {
-        organizationId: req.body.organizationId,
-        name: req.body.name,
-        address: req.body.address,
-        description: req.body.description,
-        roomNumbers: roomNumbers, // Always an array
+        organizationId: validatedData.organizationId,
+        name: validatedData.name,
+        address: validatedData.address,
+        description: validatedData.description,
+        roomNumbers: validatedData.roomNumbers,
         isActive: true,
       };
 
       const building = await dbStorage.createBuilding(buildingData);
-      // Map DB result to ensure roomNumbers is always an array
       const result = {
         ...building,
         roomNumbers: building.roomNumbers ?? [],
@@ -694,22 +859,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const buildingId = parseInt(req.params.id);
-      // Ensure roomNumbers is always an array
-      let updateRoomNumbers = [];
-      if (Array.isArray(req.body.roomNumbers)) {
-        updateRoomNumbers = req.body.roomNumbers;
-      } else if (typeof req.body.roomNumbers === 'string' && req.body.roomNumbers.trim() !== '') {
-        updateRoomNumbers = req.body.roomNumbers.split(',').map((s: string) => s.trim());
+      if (isNaN(buildingId)) {
+        return res.status(400).json({ message: "Invalid building ID" });
       }
-      const updates = {
-        name: req.body.name,
-        address: req.body.address,
-        description: req.body.description,
-        room_numbers: updateRoomNumbers, // Always an array
-      };
+
+      // Validate input with Zod schema
+      const parseResult = updateBuildingSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "Invalid update data",
+          errors: parseResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+
+      const validatedData = parseResult.data;
+      const updates: Record<string, any> = {};
+
+      // Only include fields that were provided
+      if (validatedData.name !== undefined) updates.name = validatedData.name;
+      if (validatedData.address !== undefined) updates.address = validatedData.address;
+      if (validatedData.description !== undefined) updates.description = validatedData.description;
+      if (validatedData.roomNumbers !== undefined) updates.roomNumbers = validatedData.roomNumbers;
+      if (validatedData.isActive !== undefined) updates.isActive = validatedData.isActive;
 
       const building = await dbStorage.updateBuilding(buildingId, updates);
-      // Map DB result to ensure roomNumbers is always an array
       const result = {
         ...building,
         roomNumbers: building.roomNumbers ?? [],
@@ -750,8 +923,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
-      const facilityData = req.body;
-      const facility = await dbStorage.createFacility(facilityData);
+      // Validate input with Zod schema
+      const parseResult = createFacilitySchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "Invalid facility data",
+          errors: parseResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+
+      const facility = await dbStorage.createFacility(parseResult.data);
       res.json(facility);
     } catch (error) {
       console.error("Error creating facility:", error);
@@ -770,7 +951,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const facilityId = parseInt(req.params.id);
-      const updates = req.body;
+      if (isNaN(facilityId)) {
+        return res.status(400).json({ message: "Invalid facility ID" });
+      }
+
+      // Validate input with Zod schema
+      const parseResult = updateFacilitySchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "Invalid update data",
+          errors: parseResult.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+
+      const validatedData = parseResult.data;
+      const updates: Record<string, any> = {};
+
+      // Only include fields that were provided
+      if (validatedData.name !== undefined) updates.name = validatedData.name;
+      if (validatedData.description !== undefined) updates.description = validatedData.description;
+      if (validatedData.category !== undefined) updates.category = validatedData.category;
+      if (validatedData.availableItems !== undefined) updates.availableItems = validatedData.availableItems;
+      if (validatedData.isActive !== undefined) updates.isActive = validatedData.isActive;
+      if (validatedData.sortOrder !== undefined) updates.sortOrder = validatedData.sortOrder;
+
       const facility = await dbStorage.updateFacility(facilityId, updates);
       res.json(facility);
     } catch (error) {
@@ -2201,10 +2405,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashed = await bcrypt.hash(password, 10);
 
-      // Create user - assign to New School (org ID 2) by default
+      // Get default organization for new users
+      const defaultOrgId = await getDefaultOrganizationId();
+
+      // Create user
       const id = crypto.randomUUID();
       const now = new Date();
-      const DEFAULT_ORGANIZATION_ID = 2; // New School
       const [user] = await db.insert(users).values({
         id,
         email,
@@ -2212,7 +2418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
         password: hashed,
         role: "requester",
-        organizationId: DEFAULT_ORGANIZATION_ID,
+        organizationId: defaultOrgId,
         createdAt: now,
         updatedAt: now,
       }).returning();
