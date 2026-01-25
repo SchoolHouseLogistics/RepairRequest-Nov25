@@ -27,89 +27,146 @@ export const sessions = pgTable(
 );
 
 // Organizations table for multi-tenant support
-export const organizations = pgTable("organizations", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  slug: varchar("slug").unique().notNull(), // URL-friendly identifier
-  domain: varchar("domain"), // Optional: auto-assign users by email domain
-  logoUrl: varchar("logo_url"),
-  settings: jsonb("settings"), // Custom settings per organization
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const organizations = pgTable(
+  "organizations",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name").notNull(),
+    slug: varchar("slug").unique().notNull(), // URL-friendly identifier
+    domain: varchar("domain"), // Optional: auto-assign users by email domain
+    logoUrl: varchar("logo_url"),
+    settings: jsonb("settings"), // Custom settings per organization
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    deletedAt: timestamp("deleted_at"), // Soft delete support
+  },
+  (table) => [
+    index("IDX_organizations_domain").on(table.domain),
+    index("IDX_organizations_deleted_at").on(table.deletedAt),
+  ]
+);
 
 // User storage table.
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  password: varchar("password"),
-  role: varchar("role").notNull().default("requester"), // requester, maintenance, admin
-  organizationId: integer("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: varchar("id").primaryKey().notNull(),
+    email: varchar("email").unique(),
+    firstName: varchar("first_name"),
+    lastName: varchar("last_name"),
+    profileImageUrl: varchar("profile_image_url"),
+    password: varchar("password"),
+    role: varchar("role").notNull().default("requester"), // requester, maintenance, admin
+    organizationId: integer("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    deletedAt: timestamp("deleted_at"), // Soft delete support
+  },
+  (table) => [
+    index("IDX_users_organization_id").on(table.organizationId),
+    index("IDX_users_role").on(table.role),
+    index("IDX_users_deleted_at").on(table.deletedAt),
+  ]
+);
 
 // Password reset tokens table
-export const passwordResetTokens = pgTable("password_reset_tokens", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  token: varchar("token", { length: 64 }).notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  usedAt: timestamp("used_at"), // Set when token is used
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    token: varchar("token", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"), // Set when token is used
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_password_reset_tokens_user_id").on(table.userId),
+    index("IDX_password_reset_tokens_expires_at").on(table.expiresAt),
+  ]
+);
 
 // Buildings table for organization-specific building data
-export const buildings = pgTable("buildings", {
-  id: serial("id").primaryKey(),
-  organizationId: integer("organization_id")
-    .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
-  name: varchar("name").notNull(),
-  address: varchar("address"),
-  description: text("description"),
-  imageUrl: varchar("image_url", { length: 500 }), // Uploaded building photo
-  roomNumbers: text("room_numbers").array(), // Array of room numbers for this building
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const buildings = pgTable(
+  "buildings",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name").notNull(),
+    address: varchar("address"),
+    description: text("description"),
+    imageUrl: varchar("image_url", { length: 500 }), // Uploaded building photo
+    roomNumbers: text("room_numbers").array(), // Array of room numbers for this building
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    deletedAt: timestamp("deleted_at"), // Soft delete support
+  },
+  (table) => [
+    index("IDX_buildings_organization_id").on(table.organizationId),
+    index("IDX_buildings_is_active").on(table.isActive),
+    index("IDX_buildings_deleted_at").on(table.deletedAt),
+  ]
+);
 
 // Facilities table for organization-specific facility data
-export const facilities = pgTable("facilities", {
-  id: serial("id").primaryKey(),
-  organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  name: varchar("name").notNull(),
-  description: text("description"),
-  category: varchar("category"),
-  availableItems: jsonb("available_items"), // JSON array of available items for facilities requests
-  isActive: boolean("is_active").default(true),
-  sortOrder: integer("sort_order").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const facilities = pgTable(
+  "facilities",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name").notNull(),
+    description: text("description"),
+    category: varchar("category"),
+    availableItems: jsonb("available_items"), // JSON array of available items for facilities requests
+    isActive: boolean("is_active").default(true),
+    sortOrder: integer("sort_order").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    deletedAt: timestamp("deleted_at"), // Soft delete support
+  },
+  (table) => [
+    index("IDX_facilities_organization_id").on(table.organizationId),
+    index("IDX_facilities_is_active").on(table.isActive),
+    index("IDX_facilities_deleted_at").on(table.deletedAt),
+  ]
+);
 
-// Maintenance requests table 
-export const requests = pgTable("requests", {
-  id: serial("id").primaryKey(),
-  organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-  requestType: varchar("request_type").notNull().default("facilities"), // facilities or building
-  facility: varchar("facility").notNull(),
-  event: varchar("event").notNull(),
-  eventDate: date("event_date").notNull(),
-  setupTime: time("setup_time"),
-  startTime: time("start_time"),
-  endTime: time("end_time"),
-  requestorId: varchar("requestor_id").notNull().references(() => users.id),
-  status: varchar("status").notNull().default("pending"), // pending, approved, in-progress, completed, cancelled
-  priority: varchar("priority", { length: 10 }).notNull().default("medium"), // low, medium, high, urgent
-  photoUrl: varchar("photo_url", { length: 2000 }), // URL to uploaded photo
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+// Maintenance requests table
+export const requests = pgTable(
+  "requests",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    requestType: varchar("request_type").notNull().default("facilities"), // facilities or building
+    facility: varchar("facility").notNull(),
+    event: varchar("event").notNull(),
+    eventDate: date("event_date").notNull(),
+    setupTime: time("setup_time"),
+    startTime: time("start_time"),
+    endTime: time("end_time"),
+    requestorId: varchar("requestor_id").notNull().references(() => users.id),
+    status: varchar("status").notNull().default("pending"), // pending, approved, in-progress, completed, cancelled
+    priority: varchar("priority", { length: 10 }).notNull().default("medium"), // low, medium, high, urgent
+    photoUrl: varchar("photo_url", { length: 2000 }), // URL to uploaded photo
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    deletedAt: timestamp("deleted_at"), // Soft delete support
+  },
+  (table) => [
+    index("IDX_requests_organization_id").on(table.organizationId),
+    index("IDX_requests_requestor_id").on(table.requestorId),
+    index("IDX_requests_status").on(table.status),
+    index("IDX_requests_priority").on(table.priority),
+    index("IDX_requests_event_date").on(table.eventDate),
+    index("IDX_requests_created_at").on(table.createdAt),
+    index("IDX_requests_deleted_at").on(table.deletedAt),
+    // Composite index for common multi-tenant status queries
+    index("IDX_requests_org_status").on(table.organizationId, table.status),
+  ]
+);
 
 // Request items table for facilities requests
 export const requestItems = pgTable("request_items", {
@@ -143,57 +200,92 @@ export const requestItems = pgTable("request_items", {
 });
 
 // Building request details table
-export const buildingRequests = pgTable("building_requests", {
-  id: serial("id").primaryKey(),
-  requestId: integer("request_id").notNull().references(() => requests.id),
-  building: varchar("building").notNull(),
-  roomNumber: varchar("room_number").notNull(),
-  description: text("description").notNull(),
-});
+export const buildingRequests = pgTable(
+  "building_requests",
+  {
+    id: serial("id").primaryKey(),
+    requestId: integer("request_id").notNull().references(() => requests.id),
+    building: varchar("building").notNull(),
+    roomNumber: varchar("room_number").notNull(),
+    description: text("description").notNull(),
+  },
+  (table) => [
+    index("IDX_building_requests_request_id").on(table.requestId),
+    index("IDX_building_requests_building").on(table.building),
+    index("IDX_building_requests_building_room").on(table.building, table.roomNumber),
+  ]
+);
 
 // Request assignments table
-export const assignments = pgTable("assignments", {
-  id: serial("id").primaryKey(),
-  requestId: integer("request_id").notNull().references(() => requests.id),
-  assigneeId: varchar("assignee_id").notNull().references(() => users.id),
-  assignerId: varchar("assigner_id").notNull().references(() => users.id),
-  assignedAt: timestamp("assigned_at").defaultNow(),
-  internalNotes: text("internal_notes"),
-});
+export const assignments = pgTable(
+  "assignments",
+  {
+    id: serial("id").primaryKey(),
+    requestId: integer("request_id").notNull().references(() => requests.id),
+    assigneeId: varchar("assignee_id").notNull().references(() => users.id),
+    assignerId: varchar("assigner_id").notNull().references(() => users.id),
+    assignedAt: timestamp("assigned_at").defaultNow(),
+    internalNotes: text("internal_notes"),
+  },
+  (table) => [
+    index("IDX_assignments_request_id").on(table.requestId),
+    index("IDX_assignments_assignee_id").on(table.assigneeId),
+  ]
+);
 
 // Message threads for requests
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  requestId: integer("request_id").notNull().references(() => requests.id),
-  senderId: varchar("sender_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
-  sentAt: timestamp("sent_at").defaultNow(),
-});
+export const messages = pgTable(
+  "messages",
+  {
+    id: serial("id").primaryKey(),
+    requestId: integer("request_id").notNull().references(() => requests.id),
+    senderId: varchar("sender_id").notNull().references(() => users.id),
+    content: text("content").notNull(),
+    sentAt: timestamp("sent_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_messages_request_id").on(table.requestId),
+    index("IDX_messages_sent_at").on(table.sentAt),
+  ]
+);
 
 // Request status updates for tracking
-export const statusUpdates = pgTable("status_updates", {
-  id: serial("id").primaryKey(),
-  requestId: integer("request_id").notNull().references(() => requests.id),
-  status: varchar("status").notNull(),
-  updatedById: varchar("updated_by_id").notNull().references(() => users.id),
-  note: text("note"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const statusUpdates = pgTable(
+  "status_updates",
+  {
+    id: serial("id").primaryKey(),
+    requestId: integer("request_id").notNull().references(() => requests.id),
+    status: varchar("status").notNull(),
+    updatedById: varchar("updated_by_id").notNull().references(() => users.id),
+    note: text("note"),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_status_updates_request_id").on(table.requestId),
+    index("IDX_status_updates_updated_at").on(table.updatedAt),
+  ]
+);
 
 // Request photos table for image attachments
-export const requestPhotos = pgTable("request_photos", {
-  id: serial("id").primaryKey(),
-  requestId: integer("request_id").notNull().references(() => requests.id),
-  photoUrl: varchar("photo_url", { length: 2000 }).notNull(),
-  filename: varchar("filename", { length: 500 }).notNull(),
-  originalFilename: varchar("original_filename", { length: 500 }),
-  filePath: varchar("file_path", { length: 2000 }),
-  mimeType: varchar("mime_type", { length: 100 }),
-  size: integer("size"),
-  caption: text("caption"),
-  uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
-  uploadedAt: timestamp("uploaded_at").defaultNow(),
-});
+export const requestPhotos = pgTable(
+  "request_photos",
+  {
+    id: serial("id").primaryKey(),
+    requestId: integer("request_id").notNull().references(() => requests.id),
+    photoUrl: varchar("photo_url", { length: 2000 }).notNull(),
+    filename: varchar("filename", { length: 500 }).notNull(),
+    originalFilename: varchar("original_filename", { length: 500 }),
+    filePath: varchar("file_path", { length: 2000 }),
+    mimeType: varchar("mime_type", { length: 100 }),
+    size: integer("size"),
+    caption: text("caption"),
+    uploadedById: varchar("uploaded_by_id").notNull().references(() => users.id),
+    uploadedAt: timestamp("uploaded_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_request_photos_request_id").on(table.requestId),
+  ]
+);
 
 // Contact messages table for storing contact form submissions
 export const contactMessages = pgTable("contact_messages", {

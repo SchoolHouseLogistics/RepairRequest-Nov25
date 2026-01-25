@@ -286,8 +286,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/users/bulk", isAuthenticated, async (req: any, res) => {
     try {
-      console.log("req.user:", req.user);
-
       // Extract user ID from session authentication
       const currentUserId = req.user?.id || req.user?.claims?.sub;
 
@@ -305,16 +303,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Super admin access required" });
       }
 
-
       if (!req.body.users) {
-        console.error("No users array in request body");
         return res.status(400).json({ message: "No users array provided" });
       }
 
       const result = bulkSchema.safeParse(req.body.users);
-      console.log("Validation result:", result);
       if (!result.success) {
-        console.error("Bulk import validation failed:", result.error.flatten().fieldErrors);
         return res.status(400).json({ message: result.error.flatten().fieldErrors });
       }
 
@@ -344,11 +338,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             createdAt: new Date(),
             updatedAt: new Date(),
           });
-
-          console.log(`Created user ${u.email} with temporary password: ${tempPassword}`);
           created++;
         } catch (e) {
-          console.error("Failed row:", u, e);
+          console.error("Failed to create user:", u.email, e);
           failed++;
         }
       }
@@ -359,7 +351,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (e: any) {
       console.error("Bulk import error:", e);
-      console.error("Error stack:", e.stack);
       res.status(500).json({ message: "Bulk import failed", error: e.message });
     }
   });
@@ -507,29 +498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRIORITY ROUTES: Register before Vite middleware to avoid conflicts
 
   // Priority facilities request creation route (FACILITIES ONLY - building requests go to /api/building-requests)
-  app.post("/api/requests", async (req, res) => {
-    console.log("=== FACILITIES REQUEST HANDLER (NOT BUILDING) ===");
-
+  app.post("/api/requests", authMiddleware, async (req: any, res) => {
     try {
-      // Check authentication
-      if (!req.isAuthenticated?.() || !req.user) {
-        console.log("Authentication failed");
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
       const user = req.user as AuthenticatedUser;
       const userId = user?.id;
 
-      console.log("User authenticated:", {
-        userId,
-        userRole: user.role,
-        userOrg: user.organizationId,
-        userEmail: user.email
-      });
-
-      // REDIRECT BUILDING REQUESTS TO PROPER ENDPOINT
+      // Redirect building requests to proper endpoint
       if (req.body.requestType === "building" || req.body["building.description"]) {
-        console.log("🔄 BUILDING REQUEST DETECTED - REDIRECTING TO /api/building-requests");
         return res.status(400).json({
           message: "Building requests must use /api/building-requests endpoint",
           redirect: "/api/building-requests"
@@ -540,7 +515,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requiredFields = ['facility', 'event', 'eventDate'];
       const missingFields = requiredFields.filter(field => !req.body[field]);
       if (missingFields.length > 0) {
-        console.log("Missing required fields:", missingFields);
         return res.status(400).json({
           message: "Missing required fields",
           missingFields
@@ -561,30 +535,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestorId: userId
       };
 
-      console.log("Data prepared for validation:", JSON.stringify(dataForValidation, null, 2));
-
       // Validate request data
-      console.log("Starting schema validation...");
       let requestData;
       try {
         requestData = insertRequestSchema.parse(dataForValidation);
-        console.log("Schema validation successful:", JSON.stringify(requestData, null, 2));
       } catch (validationError) {
-        console.error("Schema validation failed:", validationError);
         return res.status(400).json({
           message: "Validation error",
           error: validationError.message || validationError
         });
       }
 
-      // Create the basic request first
-      console.log("Creating request in database...");
+      // Create the basic request
       let createdRequest;
       try {
         createdRequest = await dbStorage.createRequest(requestData);
-        console.log("Request created successfully:", createdRequest);
       } catch (dbError) {
-        console.error("Database creation error:", dbError);
+        console.error("Database error creating request:", dbError);
         return res.status(500).json({
           message: "Database error during request creation",
           error: dbError.message || dbError
@@ -597,7 +564,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : "Labor request submitted";
 
       // Create initial status update
-      console.log("Creating initial status update...");
       try {
         await dbStorage.createStatusUpdate({
           requestId: createdRequest.id,
@@ -605,16 +571,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updatedById: userId,
           note: itemsNote
         });
-        console.log("Status update created successfully");
       } catch (statusError) {
-        console.error("Status update creation error:", statusError);
-        // Don't fail the whole request for status update error
+        console.error("Error creating status update:", statusError);
       }
 
       // Send email notifications
-      console.log("Sending email notifications...");
       try {
-        // Get organization and admin emails
         const organization = user.organizationId !== undefined
           ? await dbStorage.getOrganization(user.organizationId)
           : undefined;
@@ -640,23 +602,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             organizationName: organization.name,
             createdAt: new Date(createdRequest.createdAt)
           }, adminEmails);
-          console.log("Labor email notifications sent successfully");
-        } else {
-          console.log("Skipping labor email notifications - no organization or admin emails found");
         }
       } catch (emailError) {
-        console.error("Labor email notification error:", emailError);
-        // Don't fail the request if email fails
+        console.error("Email notification error:", emailError);
       }
 
-      console.log("=== LABOR REQUEST SUBMISSION COMPLETED SUCCESSFULLY ===");
       res.status(201).json(createdRequest);
     } catch (error) {
-      console.error("=== UNEXPECTED ERROR IN PRIORITY FACILITIES REQUEST ===");
-      console.error("Error type:", typeof error);
-      console.error("Error message:", error?.message);
-      console.error("Error stack:", error?.stack);
-      console.error("Full error object:", error);
+      console.error("Error creating labor request:", error);
       res.status(500).json({
         message: "Failed to create labor request",
         error: error?.message || "Unknown error"
@@ -665,27 +618,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Priority facilities endpoint
-  app.get("/api/facilities", async (req, res) => {
-    console.log("=== PRIORITY FACILITIES HANDLER ===");
-
+  app.get("/api/facilities", authMiddleware, async (req: any, res) => {
     try {
-      // Check authentication
-      if (!req.isAuthenticated?.() || !req.user) {
-        console.log("Authentication failed");
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
       const user = req.user as AuthenticatedUser;
-      const userId = user?.id;
-
-      console.log("User authenticated:", {
-        userId,
-        userRole: user.role,
-        userOrg: user.organizationId
-      });
-
       const facilities = await dbStorage.getFacilitiesByOrganization(user.organizationId);
-      console.log("Facilities found:", facilities);
       res.json(facilities);
     } catch (error) {
       console.error("Error fetching facilities:", error);
@@ -693,73 +629,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PRIORITY STATUS UPDATE ROUTE: Register before Vite middleware
-  app.post("/api/requests/:id/status", async (req, res) => {
-    console.log("=== PRIORITY STATUS UPDATE HANDLER ===");
-    console.log("Request ID:", req.params.id);
-
-    try {
-      // Check authentication
-      if (!req.isAuthenticated?.() || !req.user) {
-        console.log("Authentication failed");
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const userId = req.user.id;
-      const user = req.user;
-      const requestId = parseInt(req.params.id);
-
-      console.log("Processing status update for user:", { id: userId, role: user.role });
-
-      // Check permissions
-      const canUpdateStatus = user.role === 'admin' || user.role === 'maintenance' ||
-        (req.body.status === 'cancelled' && await dbStorage.isRequestor(userId, requestId));
-
-      if (!canUpdateStatus) {
-        console.log("Permission denied");
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      // Create status update
-      const statusUpdateData = {
-        requestId,
-        status: req.body.status,
-        updatedById: userId,
-        note: req.body.note || ""
-      };
-
-      console.log("Updating status with data:", statusUpdateData);
-
-      // Update request status
-      await dbStorage.updateRequestStatus(statusUpdateData);
-
-      // Update priority if provided
-      if (req.body.priority) {
-        console.log("Updating priority to:", req.body.priority);
-        await dbStorage.updateRequestPriority(requestId, req.body.priority);
-      }
-
-      console.log("Status update successful");
-      res.json({ success: true });
-
-    } catch (error) {
-      console.error("Status update error:", error);
-      res.status(500).json({
-        message: "Failed to update request status",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
   // PRIORITY DASHBOARD ROUTES: Register before Vite middleware
-  app.get("/api/dashboard/stats", async (req, res) => {
-    console.log("=== PRIORITY DASHBOARD STATS ===");
-
+  app.get("/api/dashboard/stats", authMiddleware, async (req: any, res) => {
     try {
-      if (!req.isAuthenticated?.() || !req.user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
       const user = req.user;
       const userId = user.id;
 
@@ -779,14 +651,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/requests/recent", async (req, res) => {
-    console.log("=== PRIORITY RECENT REQUESTS ===");
-
+  app.get("/api/requests/recent", authMiddleware, async (req: any, res) => {
     try {
-      if (!req.isAuthenticated?.() || !req.user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
       const user = req.user;
       const userId = user.id;
 
@@ -799,7 +665,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requests = await dbStorage.getUserRequests(userId, 10);
       }
 
-      console.log("Recent requests found:", requests.length);
       res.json(requests);
     } catch (error) {
       console.error("Error fetching recent requests:", error);
@@ -1019,21 +884,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const multerStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-      console.log(`=== MULTER DESTINATION ===`);
-      console.log(`Upload directory: ${uploadDir}`);
-      console.log(`Directory exists: ${fs.existsSync(uploadDir)}`);
-      console.log(`Current working directory: ${process.cwd()}`);
-
-      // Ensure the directory exists before writing
       try {
         if (!fs.existsSync(uploadDir)) {
-          console.log(`Creating directory: ${uploadDir}`);
           fs.mkdirSync(uploadDir, { recursive: true });
         }
-        console.log(`Directory ready for upload`);
         cb(null, uploadDir);
       } catch (error: any) {
-        console.error(`Directory creation failed:`, error);
+        console.error("Upload directory creation failed:", error);
         cb(error, uploadDir);
       }
     },
@@ -1041,13 +898,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const ext = path.extname(file.originalname);
       const filename = `photo-${uniqueSuffix}${ext}`;
-
-      console.log(`=== MULTER FILENAME ===`);
-      console.log(`Original name: ${file.originalname}`);
-      console.log(`Generated filename: ${filename}`);
-      console.log(`Extension: ${ext}`);
-      console.log(`MIME type: ${file.mimetype}`);
-
       cb(null, filename);
     }
   });
@@ -1093,14 +943,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Expires', '0');
     
     try {
-      console.log("=== /api/auth/user endpoint ===");
-
       if (!req.session.user) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const user = req.session.user;
-      return res.json(user);
+      return res.json(req.session.user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -1154,41 +1001,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Create a new building request with photo upload  
-  app.post("/api/building-requests", (req, res, next) => {
-    console.log("🚨🚨🚨 BUILDING REQUEST ENDPOINT HIT - PHOTOS DEBUG 🚨🚨🚨");
-    console.log("Request URL:", req.url);
-    console.log("Request method:", req.method);
-    console.log("Content-Type:", req.headers['content-type']);
-    console.log("Auth header:", req.headers.authorization);
-
-    // Check auth first
-    if (!req.isAuthenticated?.() || !req.user) {
-      console.log("=== AUTHENTICATION FAILED ===");
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    console.log("=== AUTH SUCCESS - PROCEEDING TO MULTER ===");
-    console.log("Files before multer:", req.files);
-    console.log("Body before multer:", req.body);
-
+  // Create a new building request with photo upload
+  app.post("/api/building-requests", authMiddleware, (req: any, res, next) => {
+    // Process file upload after auth
     upload.array('photos', 5)(req, res, (err) => {
-      console.log("🎯🎯🎯 MULTER CALLBACK REACHED 🎯🎯🎯");
-      console.log("Error:", err);
-      console.log("Files after multer:", req.files);
-      console.log("Body after multer:", req.body);
-
       if (err) {
-        console.error("MULTER UPLOAD ERROR:", err);
+        console.error("File upload error:", err);
         return res.status(400).json({ message: "File upload error", error: err.message });
       }
-
-      console.log("=== MULTER SUCCESS - PROCEEDING TO HANDLER ===");
       next();
     });
   }, async (req: any, res) => {
     try {
-      console.log("Building request submission started");
       const user = req.user;
       const userId = user?.id;
 
@@ -1196,17 +1020,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      console.log("User info:", { userId, userRole: user.role, userOrg: user.organizationId });
-
-      // Log the raw request body for debugging
-      console.log("Raw request body:", JSON.stringify(req.body, null, 2));
-
       // Parse form data - handle multiple input formats
       let facility = req.body.facility || req.body.building;
       let event = req.body.event || req.body.requestTitle;
       let eventDate = req.body.eventDate || new Date().toISOString().split('T')[0];
       let priority = req.body.priority || "medium";
-      let buildingName = facility; // Use facility as building name
+      let buildingName = facility;
       let roomNumber = req.body.roomNumber || req.body["building.roomNumber"];
       let description = req.body.description || req.body["building.description"];
 
@@ -1219,52 +1038,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buildingName = buildingName || buildingData.building;
       }
 
-      console.log("Building request received:", {
-        facility,
-        event,
-        eventDate,
-        priority,
-        buildingName,
-        roomNumber,
-        description,
-        photoCount: req.files?.length || 0
-      });
-
-      // Detailed logging for file uploads
-      if (req.files && req.files.length > 0) {
-        req.files.forEach((file: any, index: number) => {
-          console.log(`File ${index + 1}:`, {
-            originalname: file.originalname,
-            filename: file.filename,
-            mimetype: file.mimetype,
-            size: file.size,
-            destination: file.destination,
-            path: file.path
-          });
-
-          // Check if file exists at the expected path
-          const fileExists = fs.existsSync(file.path);
-          console.log(`File exists at ${file.path}: ${fileExists}`);
-
-          if (fileExists) {
-            const stats = fs.statSync(file.path);
-            console.log(`File stats:`, { size: stats.size, mode: stats.mode });
-          }
-        });
-      } else {
-        console.log("No files uploaded with this request");
-      }
-
       // Validate required fields
       if (!facility || !roomNumber || !description) {
-        console.log("Missing required fields:", { facility, roomNumber, description });
         return res.status(400).json({ message: "Missing required fields: facility, roomNumber, description" });
       }
 
-      // User already exists in database
-
       // Validate request data
-      console.log("Validating request data...");
       const requestData = insertRequestSchema.parse({
         requestType: "building",
         facility,
@@ -1274,78 +1053,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requestorId: userId,
         organizationId: user.organizationId
       });
-      console.log("Request data validated successfully");
 
-      // Create the request first
-      console.log("Creating basic request...");
+      // Create the request
       const createdRequest = await dbStorage.createRequest(requestData);
-      console.log("Basic request created with ID:", createdRequest.id);
 
-      // Then validate building request data with the request ID
-      console.log("Validating building request data...");
+      // Validate building request data with the request ID
       const buildingRequestData = insertBuildingRequestSchema.parse({
         requestId: createdRequest.id,
         building: buildingName || facility,
         roomNumber,
         description
       });
-      console.log("Building request data validated successfully");
 
-      // Update the request with building-specific details
-      console.log("Creating building request record...");
+      // Create building request record
       await dbStorage.createBuildingRequest(buildingRequestData);
-      console.log("Building request record created successfully");
 
       // If photos were uploaded, save them to the database
       if (req.files && req.files.length > 0) {
         try {
-          console.log(`Processing ${req.files.length} uploaded photos`);
           for (const file of req.files) {
-            console.log(`Processing photo: ${file.originalname}`);
-            // Read file buffer for S3 upload
             const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : undefined);
             if (!fileBuffer) {
-              console.error(`Could not read file buffer for ${file.filename}`);
               continue;
             }
-            // Create a photo record for each uploaded file
             const photoData = {
               requestId: createdRequest.id,
               filename: file.filename,
               originalFilename: file.originalname,
-              filePath: undefined, // S3 URL will be set in storage
+              filePath: undefined,
               mimeType: file.mimetype,
               size: file.size,
               caption: `Building request photo - ${file.originalname}`,
               uploadedById: userId,
-              photoUrl: undefined, // S3 URL will be set in storage
+              photoUrl: undefined,
               fileBuffer
             };
             await dbStorage.saveRequestPhoto(photoData);
-            // Optionally, delete the local file after upload
+            // Delete local file after upload
             if (file.path) {
               try { require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
             }
-            console.log(`Photo uploaded to S3 and saved: ${file.originalname} (${file.size} bytes)`);
           }
         } catch (error) {
           console.error("Error saving photos:", error);
-          // Continue with request processing even if photo upload fails
         }
       }
 
       // Create initial status update
-      console.log("Creating initial status update...");
       await dbStorage.createStatusUpdate({
         requestId: createdRequest.id,
         status: "pending",
         updatedById: userId,
         note: "Building request submitted"
       });
-      console.log("Status update created successfully");
 
       // Send email notifications
-      console.log("Sending email notifications...");
       try {
         // Get organization and admin emails
         const organization = user.organizationId !== undefined
@@ -1370,23 +1132,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             organizationName: organization.name,
             createdAt: new Date()
           }, adminEmails);
-          console.log("Email notifications sent successfully");
-        } else {
-          console.log("Skipping email notifications - no organization or admin emails found");
         }
       } catch (emailError) {
         console.error("Email notification error:", emailError);
-        // Don't fail the request if email fails
       }
 
-      console.log("Building request submission completed successfully");
       res.status(201).json(createdRequest);
     } catch (error) {
       console.error("Error creating building request:", error);
-      if (error instanceof Error) {
-        console.error("Error details:", error.message);
-        console.error("Error stack:", error.stack);
-      }
       res.status(500).json({
         message: "Failed to create building request",
         error: error instanceof Error ? error.message : "Unknown error"
@@ -1477,6 +1230,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      // Verify user can access this request (includes org verification)
+      const canAccess = await dbStorage.canAccessRequest(userId, requestId);
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const request = await dbStorage.getRequestDetails(requestId);
       if (!request) {
         return res.status(404).json({ message: "Request not found" });
@@ -1499,6 +1258,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      // Verify user has access to this request (includes org verification)
+      const canAccess = await dbStorage.canAccessRequest(userId, requestId);
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       const timeline = await dbStorage.getRequestTimeline(requestId);
       res.json(timeline);
     } catch (error) {
@@ -1515,6 +1280,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId || !user) {
         return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Verify user has access to this request (includes org verification)
+      const canAccess = await dbStorage.canAccessRequest(userId, requestId);
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       const messages = await dbStorage.getRequestMessages(requestId);
@@ -1564,15 +1335,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user;
       const requestId = parseInt(req.params.id);
 
-      if (user?.role !== 'admin' && user?.role !== 'maintenance') {
+      // Check role permission
+      if (user?.role !== 'admin' && user?.role !== 'maintenance' && user?.role !== 'super_admin') {
         return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Verify user can access this request (includes org verification)
+      const canAccess = await dbStorage.canAccessRequest(userId, requestId);
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       // Validate assignment data
       const assignmentData = insertAssignmentSchema.parse({
         requestId,
         assigneeId: req.body.assigneeId,
-        assignerId: userId, // This comes from getUserInfo now, so it's safe
+        assignerId: userId,
         internalNotes: req.body.internalNotes || ""
       });
 
@@ -1600,25 +1378,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update request status
   app.post("/api/requests/:id/status", authMiddleware, async (req: any, res) => {
     try {
-      console.log("=== STATUS UPDATE REQUEST ===");
-      console.log("Request ID:", req.params.id);
-
       // User is already authenticated by authMiddleware
       const userId = req.userId;
       const user = req.user;
       const requestId = parseInt(req.params.id);
 
+      // Verify user can access this request (includes org verification)
+      const canAccess = await dbStorage.canAccessRequest(userId, requestId);
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
       // Check if user has proper permissions to update status
-      const canUpdateStatus = user?.role === 'admin' || user?.role === 'maintenance' ||
+      const canUpdateStatus = user?.role === 'admin' || user?.role === 'maintenance' || user?.role === 'super_admin' ||
         (req.body.status === 'cancelled' && await dbStorage.isRequestor(userId, requestId));
 
       if (!canUpdateStatus) {
-        console.log("Permission denied for user:", { userId, role: user?.role, requestedStatus: req.body.status });
         return res.status(403).json({ message: "Unauthorized" });
       }
 
       // Validate status update data
-      console.log("Validating status update data...");
       const statusUpdateData = insertStatusUpdateSchema.parse({
         requestId,
         status: req.body.status,
@@ -1626,23 +1405,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         note: req.body.note
       });
 
-      console.log("Validated status update data:", statusUpdateData);
-
       // Update request status and priority if provided
-      console.log("Updating request status...");
       await dbStorage.updateRequestStatus(statusUpdateData);
 
       // Update priority if provided
       if (req.body.priority) {
-        console.log("Updating priority to:", req.body.priority);
         await dbStorage.updateRequestPriority(requestId, req.body.priority);
       }
 
-      console.log("Status update successful");
       res.json({ success: true });
     } catch (error) {
       console.error("Error updating request status:", error);
-      console.error("Error stack:", (error as Error).stack);
       res.status(500).json({
         message: "Failed to update request status",
         error: error instanceof Error ? error.message : "Unknown error"
@@ -1650,25 +1423,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get organization buildings - fixed authentication
-  app.get("/api/buildings", (req: any, res) => {
+  // Get organization buildings
+  app.get("/api/buildings", authMiddleware, async (req: any, res) => {
     try {
-      if (!req.isAuthenticated?.() || !req.user) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
       const user = req.user;
       if (user.organizationId === undefined) {
         return res.status(400).json({ message: "No organization assigned to user." });
       }
-      dbStorage.getBuildingsByOrganization(user.organizationId)
-        .then(buildings => {
-          console.log("Buildings found:", buildings);
-          res.json(buildings);
-        })
-        .catch(error => {
-          console.error("Error fetching buildings:", error);
-          res.status(500).json({ message: "Failed to fetch buildings" });
-        });
+      const buildings = await dbStorage.getBuildingsByOrganization(user.organizationId);
+      res.json(buildings);
     } catch (error) {
       console.error("Error fetching buildings:", error);
       res.status(500).json({ message: "Failed to fetch buildings" });
@@ -2001,8 +1764,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all building names for room history dropdown
   app.get("/api/room-buildings", authMiddleware, async (req: any, res) => {
     try {
-      console.log("=== /api/room-buildings endpoint called ===");
-
       const { userId } = await getUserInfo(req);
       const user = await dbStorage.getUser(userId);
 
@@ -2015,17 +1776,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get building names from building_requests table filtered by org
       const buildingNames = await dbStorage.getAllBuildings(orgId);
-      console.log("Building names from getAllBuildings:", buildingNames);
 
       // If no building names found in building_requests, fall back to buildings table names
       if (!buildingNames || buildingNames.length === 0) {
-        console.log("No buildings found in building_requests, checking buildings table");
-
         if (user.organizationId) {
           const buildings = await dbStorage.getBuildingsByOrganization(user.organizationId);
-          const names = buildings.map((building: any) => building.name);
-          console.log("Building names from buildings table:", names);
-          res.json(names);
+          res.json(buildings.map((building: any) => building.name));
         } else {
           res.json([]);
         }
@@ -2339,26 +2095,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Contact form submission endpoint
   app.post("/api/contact", async (req, res) => {
-    console.log("[CONTACT] ====== Contact form endpoint hit ======");
-    console.log("[CONTACT] Request body:", JSON.stringify(req.body, null, 2));
-    console.log("[CONTACT] isZeptoMailConfigured():", isZeptoMailConfigured());
-    
     try {
       const parsed = insertContactMessageSchema.safeParse(req.body);
       if (!parsed.success) {
-        console.log("[CONTACT] Validation FAILED:", parsed.error.errors);
         return res.status(400).json({ error: "Invalid input", details: parsed.error.errors });
       }
-      console.log("[CONTACT] Validation passed:", JSON.stringify(parsed.data, null, 2));
-      
+
       // Save to database
       const [created] = await db.insert(contactMessages).values(parsed.data).returning();
-      console.log("[CONTACT] Saved to database, ID:", created.id);
-      
+
       // Send emails via ZeptoMail
-      console.log("[CONTACT] Checking ZeptoMail config...");
       if (isZeptoMailConfigured()) {
-        console.log("[CONTACT] ZeptoMail IS configured, attempting to send emails...");
         const emailResult = await sendContactFormEmails({
           firstName: parsed.data.firstName,
           lastName: parsed.data.lastName,
@@ -2369,36 +2116,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           inquiry: parsed.data.inquiry || undefined,
           message: parsed.data.message,
         });
-        
+
         if (!emailResult.success) {
-          console.error("[CONTACT] Email sending failed:", emailResult.error);
-        } else {
-          console.log("[CONTACT] Emails sent successfully");
+          console.error("Contact form email sending failed:", emailResult.error);
         }
-      } else {
-        console.log("[CONTACT] ZeptoMail not configured, skipping email notifications");
       }
-      
+
       res.status(201).json({ success: true, message: "Message received", data: created });
     } catch (error) {
-      console.error("[CONTACT] Error:", error);
+      console.error("Error processing contact form:", error);
       res.status(500).json({ error: "Failed to submit message" });
     }
   });
 
-  // === Neon DB Email/Password Signup ===
+  // Neon DB Email/Password Signup
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
       if (!email || !password || !firstName || !lastName) {
-        console.warn("⚠️ Missing fields:", req.body);
         return res.status(400).json({ message: "Missing required fields" });
       }
 
       // Check if user exists
       const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
       if (existing) {
-        console.log("❌ User already exists:", email);
         return res.status(409).json({ message: "User with this email already exists" });
       }
 
@@ -2423,8 +2164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: now,
       }).returning();
 
-      console.log("✅ User created:", user);
-
       // Set session for user after signup
       req.session.user = {
         id: user.id,
@@ -2438,11 +2177,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save session before sending response
       req.session.save((err: any) => {
         if (err) {
-          console.error("🔥 Session save error:", err);
+          console.error("Session save error:", err);
           return res.status(500).json({ message: "Failed to save session" });
         }
-
-        console.log("✅ Session saved with user:", req.session.user);
 
         return res.status(201).json({
           message: "Signup successful",
@@ -2456,7 +2193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
     } catch (err: any) {
-      console.error("🔥 Signup error:", err);
+      console.error("Signup error:", err);
       return res.status(500).json({
         message: "Signup failed",
         error: err.message,

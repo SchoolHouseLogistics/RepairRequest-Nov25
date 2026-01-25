@@ -91,7 +91,6 @@ function saveFileLocally(key: string, fileBuffer: Buffer): string {
   const safeKey = key.replace(/\//g, '-');
   const localPath = path.join(uploadsDir, safeKey);
   fs.writeFileSync(localPath, fileBuffer);
-  console.log(`File saved locally to: ${localPath}`);
   return `/uploads/photos/${safeKey}`;
 }
 
@@ -99,13 +98,11 @@ function saveFileLocally(key: string, fileBuffer: Buffer): string {
 async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: string) {
   // Only use Replit Object Storage if we're actually in Replit
   if (isReplitEnvironment() && process.env.PRIVATE_OBJECT_DIR) {
-    console.log("Using Replit Object Storage for upload");
     return uploadToObjectStorage(key, fileBuffer, contentType);
   }
-  
+
   // Fall back to AWS S3 if configured
   if (S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
-    console.log("Using AWS S3 for upload");
     const params = {
       Bucket: S3_BUCKET,
       Key: key,
@@ -117,7 +114,6 @@ async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: stri
   }
   
   // Use local filesystem (works on Railway)
-  console.log("Using local filesystem for upload");
   return saveFileLocally(key, fileBuffer);
 }
 
@@ -131,19 +127,22 @@ export interface IStorage {
   updateOrganization(id: number, updates: Partial<InsertOrganization>): Promise<Organization>;
   getAllOrganizations(): Promise<any[]>;
   deleteOrganization(id: number): Promise<void>;
-  
+  softDeleteOrganization(id: number): Promise<void>;
+
   // Building operations
   createBuilding(buildingData: InsertBuilding): Promise<Building>;
   getBuildingsByOrganization(organizationId: number): Promise<Building[]>;
   updateBuilding(id: number, updates: Partial<InsertBuilding>): Promise<Building>;
   deleteBuilding(id: number): Promise<void>;
-  
+  softDeleteBuilding(id: number): Promise<void>;
+
   // Facility operations
   createFacility(facilityData: InsertFacility): Promise<Facility>;
   getFacilitiesByOrganization(organizationId: number): Promise<Facility[]>;
   updateFacility(id: number, updates: Partial<InsertFacility>): Promise<Facility>;
   deleteFacility(id: number): Promise<void>;
-  
+  softDeleteFacility(id: number): Promise<void>;
+
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -153,6 +152,7 @@ export interface IStorage {
   updateUserRole(userId: string, role: string): Promise<User>;
   updateUserOrganization(userId: string, organizationId: number): Promise<User>;
   deleteUser(userId: string): Promise<void>;
+  softDeleteUser(userId: string): Promise<void>;
   
   // Request operations
   createRequest(requestData: InsertRequest, requestItemsData?: InsertRequestItems): Promise<Request>;
@@ -193,7 +193,8 @@ export interface IStorage {
   // Access control
   canAccessRequest(userId: string, requestId: number): Promise<boolean>;
   isRequestor(userId: string, requestId: number): Promise<boolean>;
-  
+  softDeleteRequest(requestId: number): Promise<void>;
+
   // Reports
   getReportsData(reportType: string, organizationId?: number): Promise<any>;
 
@@ -215,17 +216,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOrganization(id: number): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    const [org] = await db.select().from(organizations).where(
+      and(eq(organizations.id, id), isNull(organizations.deletedAt))
+    );
     return org;
   }
 
   async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.slug, slug));
+    const [org] = await db.select().from(organizations).where(
+      and(eq(organizations.slug, slug), isNull(organizations.deletedAt))
+    );
     return org;
   }
 
   async getOrganizationByDomain(domain: string): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.domain, domain));
+    const [org] = await db.select().from(organizations).where(
+      and(eq(organizations.domain, domain), isNull(organizations.deletedAt))
+    );
     return org;
   }
 
@@ -239,7 +246,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllOrganizations(): Promise<any[]> {
-    console.log("Storage: getAllOrganizations called");
     try {
       const orgList = await db
         .select({
@@ -251,10 +257,11 @@ export class DatabaseStorage implements IStorage {
           settings: organizations.settings,
           createdAt: organizations.createdAt,
           updatedAt: organizations.updatedAt,
-          userCount: sql<number>`(SELECT COUNT(*) FROM users WHERE users.organization_id = organizations.id)`,
-          buildingCount: sql<number>`(SELECT COUNT(*) FROM buildings WHERE buildings.organization_id = organizations.id)`,
+          userCount: sql<number>`(SELECT COUNT(*) FROM users WHERE users.organization_id = organizations.id AND users.deleted_at IS NULL)`,
+          buildingCount: sql<number>`(SELECT COUNT(*) FROM buildings WHERE buildings.organization_id = organizations.id AND buildings.deleted_at IS NULL)`,
         })
         .from(organizations)
+        .where(isNull(organizations.deletedAt))
         .orderBy(organizations.name);
       return orgList;
     } catch (error) {
@@ -264,7 +271,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteOrganization(id: number): Promise<void> {
+    // Hard delete - use softDeleteOrganization for soft deletes
     await db.delete(organizations).where(eq(organizations.id, id));
+  }
+
+  async softDeleteOrganization(id: number): Promise<void> {
+    await db.update(organizations)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(organizations.id, id));
   }
 
   // Building operations
@@ -274,20 +288,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBuildingsByOrganization(organizationId: number): Promise<Building[]> {
-    return db.select().from(buildings).where(eq(buildings.organizationId, organizationId));
+    return db.select().from(buildings).where(
+      and(eq(buildings.organizationId, organizationId), isNull(buildings.deletedAt))
+    );
   }
 
   async updateBuilding(id: number, updates: Partial<InsertBuilding>): Promise<Building> {
     const [building] = await db
       .update(buildings)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(buildings.id, id))
+      .where(and(eq(buildings.id, id), isNull(buildings.deletedAt)))
       .returning();
     return building;
   }
 
   async deleteBuilding(id: number): Promise<void> {
+    // Hard delete - use softDeleteBuilding for soft deletes
     await db.delete(buildings).where(eq(buildings.id, id));
+  }
+
+  async softDeleteBuilding(id: number): Promise<void> {
+    await db.update(buildings)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(buildings.id, id));
   }
   
   // Facility operations
@@ -297,56 +320,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFacilitiesByOrganization(organizationId: number): Promise<Facility[]> {
-    return db.select().from(facilities).where(eq(facilities.organizationId, organizationId));
+    return db.select().from(facilities).where(
+      and(eq(facilities.organizationId, organizationId), isNull(facilities.deletedAt))
+    );
   }
 
   async updateFacility(id: number, updates: Partial<InsertFacility>): Promise<Facility> {
     const [facility] = await db
       .update(facilities)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(facilities.id, id))
+      .where(and(eq(facilities.id, id), isNull(facilities.deletedAt)))
       .returning();
     return facility;
   }
 
   async deleteFacility(id: number): Promise<void> {
+    // Hard delete - use softDeleteFacility for soft deletes
     await db.delete(facilities).where(eq(facilities.id, id));
+  }
+
+  async softDeleteFacility(id: number): Promise<void> {
+    await db.update(facilities)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(facilities.id, id));
   }
   
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    console.log("=== STORAGE getUser DEBUG ===");
-    console.log("Requested ID:", id);
-    console.log("ID type:", typeof id);
-    console.log("ID length:", id?.length);
-    
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    console.log("Database query result:", user ? "Found user" : "No user found");
-    
-    if (user) {
-      console.log("Found user details:", {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      });
-    } else {
-      // Try to find by converting ID to string
-      console.log("Attempting alternative ID lookups...");
-      const allUsers = await db.select().from(users);
-      console.log("Total users in database:", allUsers.length);
-      
-      const matchingUser = allUsers.find(u => u.id.toString() === id.toString());
-      if (matchingUser) {
-        console.log("Found user via string conversion:", matchingUser.email);
-        return matchingUser;
-      }
-    }
-    
+    const [user] = await db.select().from(users).where(
+      and(eq(users.id, id), isNull(users.deletedAt))
+    );
     return user;
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(users).where(
+      and(eq(users.email, email), isNull(users.deletedAt))
+    );
     return user;
   }
 
@@ -375,10 +385,11 @@ export class DatabaseStorage implements IStorage {
         eq(users.role, 'maintenance'),
         eq(users.role, 'admin')
       ),
-      eq(users.organizationId, organizationId)
+      eq(users.organizationId, organizationId),
+      isNull(users.deletedAt)
     ));
   }
-  
+
   async getAllUsers(): Promise<any[]> {
     return db
       .select({
@@ -395,6 +406,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(users)
       .leftJoin(organizations, eq(users.organizationId, organizations.id))
+      .where(isNull(users.deletedAt))
       .orderBy(users.email);
   }
 
@@ -402,7 +414,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ role, updatedAt: new Date() })
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .returning();
     return user;
   }
@@ -411,13 +423,20 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ organizationId, updatedAt: new Date() })
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .returning();
     return user;
   }
 
   async deleteUser(userId: string): Promise<void> {
+    // Hard delete - use softDeleteUser for soft deletes
     await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async softDeleteUser(userId: string): Promise<void> {
+    await db.update(users)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
   
   // Request operations
@@ -457,14 +476,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getRequestById(id: number): Promise<Request | undefined> {
-    const [request] = await db.select().from(requests).where(eq(requests.id, id));
+    const [request] = await db.select().from(requests).where(
+      and(eq(requests.id, id), isNull(requests.deletedAt))
+    );
     return request;
   }
   
   async getRequestDetails(id: number): Promise<any> {
-    // Get request with its items
-    const [request] = await db.select().from(requests).where(eq(requests.id, id));
-    
+    // Get request with its items (excluding soft-deleted)
+    const [request] = await db.select().from(requests).where(
+      and(eq(requests.id, id), isNull(requests.deletedAt))
+    );
+
     if (!request) {
       return null;
     }
@@ -516,35 +539,40 @@ export class DatabaseStorage implements IStorage {
   
   // Dashboard stats
   async getUserDashboardStats(userId: string): Promise<any> {
+    const notDeleted = isNull(requests.deletedAt);
+
     const total = await db
       .select({ count: count() })
       .from(requests)
-      .where(eq(requests.requestorId, userId));
-    
+      .where(and(eq(requests.requestorId, userId), notDeleted));
+
     const pending = await db
       .select({ count: count() })
       .from(requests)
       .where(and(
         eq(requests.requestorId, userId),
-        eq(requests.status, 'pending')
+        eq(requests.status, 'pending'),
+        notDeleted
       ));
-    
+
     const inProgress = await db
       .select({ count: count() })
       .from(requests)
       .where(and(
         eq(requests.requestorId, userId),
-        eq(requests.status, 'in-progress')
+        eq(requests.status, 'in-progress'),
+        notDeleted
       ));
-    
+
     const completed = await db
       .select({ count: count() })
       .from(requests)
       .where(and(
         eq(requests.requestorId, userId),
-        eq(requests.status, 'completed')
+        eq(requests.status, 'completed'),
+        notDeleted
       ));
-    
+
     return {
       total: total[0].count,
       pending: pending[0].count,
@@ -556,25 +584,35 @@ export class DatabaseStorage implements IStorage {
   async getAdminDashboardStats(organizationId?: number): Promise<any> {
     // If organizationId is provided, filter by organization (for regular admins)
     // If not provided, show all data (for super admins)
-    const whereClause = organizationId ? eq(requests.organizationId, organizationId) : undefined;
-    
-    const total = await db.select({ count: count() }).from(requests).where(whereClause);
-    
+    // Always exclude soft-deleted requests
+    const notDeleted = isNull(requests.deletedAt);
+    const baseCondition = organizationId
+      ? and(eq(requests.organizationId, organizationId), notDeleted)
+      : notDeleted;
+
+    const total = await db.select({ count: count() }).from(requests).where(baseCondition);
+
     const pending = await db
       .select({ count: count() })
       .from(requests)
-      .where(organizationId ? and(eq(requests.status, 'pending'), eq(requests.organizationId, organizationId)) : eq(requests.status, 'pending'));
-    
+      .where(organizationId
+        ? and(eq(requests.status, 'pending'), eq(requests.organizationId, organizationId), notDeleted)
+        : and(eq(requests.status, 'pending'), notDeleted));
+
     const inProgress = await db
       .select({ count: count() })
       .from(requests)
-      .where(organizationId ? and(eq(requests.status, 'in-progress'), eq(requests.organizationId, organizationId)) : eq(requests.status, 'in-progress'));
-    
+      .where(organizationId
+        ? and(eq(requests.status, 'in-progress'), eq(requests.organizationId, organizationId), notDeleted)
+        : and(eq(requests.status, 'in-progress'), notDeleted));
+
     const completed = await db
       .select({ count: count() })
       .from(requests)
-      .where(organizationId ? and(eq(requests.status, 'completed'), eq(requests.organizationId, organizationId)) : eq(requests.status, 'completed'));
-    
+      .where(organizationId
+        ? and(eq(requests.status, 'completed'), eq(requests.organizationId, organizationId), notDeleted)
+        : and(eq(requests.status, 'completed'), notDeleted));
+
     return {
       total: total[0].count,
       pending: pending[0].count,
@@ -585,23 +623,23 @@ export class DatabaseStorage implements IStorage {
   
   // Request listings
   async getRecentRequests(limit: number, organizationId?: number): Promise<any[]> {
-    let query = db
+    // Build where condition: always exclude soft-deleted, optionally filter by org
+    const notDeleted = isNull(requests.deletedAt);
+    const whereCondition = organizationId
+      ? and(eq(requests.organizationId, organizationId), notDeleted)
+      : notDeleted;
+
+    const requestList = await db
       .select({
         request: requests,
         requestor: users
       })
       .from(requests)
       .leftJoin(users, eq(users.id, requests.requestorId))
+      .where(whereCondition)
       .orderBy(desc(requests.createdAt))
       .limit(limit);
 
-    // Filter by organization if provided (for regular admins)
-    if (organizationId) {
-      query = query.where(eq(requests.organizationId, organizationId)) as any;
-    }
-    
-    const requestList = await query;
-    
     return requestList.map(item => ({
       ...item.request,
       requestor: item.requestor ? {
@@ -616,10 +654,10 @@ export class DatabaseStorage implements IStorage {
     const requestList = await db
       .select()
       .from(requests)
-      .where(eq(requests.requestorId, userId))
+      .where(and(eq(requests.requestorId, userId), isNull(requests.deletedAt)))
       .orderBy(desc(requests.createdAt))
       .limit(limit);
-    
+
     return requestList;
   }
   
@@ -627,7 +665,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use a single query with LEFT JOINs to avoid N+1 queries
       // Join requests -> assignments -> assignee (users)
-      const conditions = [eq(requests.requestorId, userId)];
+      const conditions = [eq(requests.requestorId, userId), isNull(requests.deletedAt)];
       if (status) {
         conditions.push(eq(requests.status, status));
       }
@@ -674,7 +712,8 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use a single query with LEFT JOINs to avoid N+1 queries
       // Join requests -> requestor (users) -> assignments -> assignee (users)
-      const conditions = [];
+      // Always exclude soft-deleted requests
+      const conditions = [isNull(requests.deletedAt)];
       if (status) {
         conditions.push(eq(requests.status, status));
       }
@@ -742,6 +781,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Use a single query with JOINs to avoid N+1 queries
       // Join assignments -> requests -> requestor (users)
+      // Exclude soft-deleted requests
       const results = await db
         .select({
           request: requests,
@@ -754,7 +794,7 @@ export class DatabaseStorage implements IStorage {
           internalNotes: assignments.internalNotes,
         })
         .from(assignments)
-        .innerJoin(requests, eq(requests.id, assignments.requestId))
+        .innerJoin(requests, and(eq(requests.id, assignments.requestId), isNull(requests.deletedAt)))
         .leftJoin(users, eq(users.id, requests.requestorId))
         .where(eq(assignments.assigneeId, userId))
         .orderBy(desc(requests.updatedAt));
@@ -1034,14 +1074,19 @@ export class DatabaseStorage implements IStorage {
         eq(requests.id, requestId),
         eq(requests.requestorId, userId)
       ));
-    
+
     return !!request;
   }
-  
+
+  async softDeleteRequest(requestId: number): Promise<void> {
+    await db.update(requests)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(requests.id, requestId));
+  }
+
   // Photo uploads
   async saveRequestPhoto(photoData: InsertRequestPhoto & { fileBuffer?: Buffer }): Promise<RequestPhoto> {
     try {
-      console.log("Saving photo with data:", photoData);
       let photoUrl = photoData.photoUrl || `uploads/photos/${photoData.filename}`;
       let filePath = photoData.filePath;
       // If fileBuffer is provided, upload to S3
@@ -1319,8 +1364,6 @@ export class DatabaseStorage implements IStorage {
 
   async getOrganizationAdminEmails(organizationId: number): Promise<string[]> {
     try {
-      console.log("Getting admin emails for organization:", organizationId);
-
       const adminUsers = await db
         .select({ email: users.email })
         .from(users)
@@ -1334,10 +1377,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
 
-      const emails = adminUsers.map(user => user.email).filter(email => email !== null);
-      console.log("Found admin emails:", emails);
-
-      return emails;
+      return adminUsers.map(user => user.email).filter(email => email !== null);
     } catch (error) {
       console.error("Error getting organization admin emails:", error);
       return [];
