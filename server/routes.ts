@@ -644,50 +644,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CRITICAL: Add critical admin routes first to avoid Vite conflicts
-  app.get("/api/admin/organizations", async (req: any, res) => {
-    try {
-      console.log("Direct organizations route called");
-      const organizations = await dbStorage.getAllOrganizations();
-      console.log("Direct route organizations:", organizations);
-      res.setHeader('Content-Type', 'application/json');
-      res.json(organizations);
-    } catch (error) {
-      console.error("Direct route error:", error);
-      res.status(500).json({ error: "Failed to fetch organizations" });
-    }
-  });
-
-  // Get buildings for organization
-  app.get("/api/admin/buildings/:orgId", async (req: any, res) => {
-    try {
-      const orgId = parseInt(req.params.orgId);
-      console.log("Fetching buildings for organization:", orgId);
-      const buildings = await dbStorage.getBuildingsByOrganization(orgId);
-      console.log("Buildings found:", buildings);
-      res.setHeader('Content-Type', 'application/json');
-      res.json(buildings);
-    } catch (error) {
-      console.error("Error fetching buildings:", error);
-      res.status(500).json({ error: "Failed to fetch buildings" });
-    }
-  });
-
-  // Get facilities for organization
-  app.get("/api/admin/facilities/:orgId", async (req: any, res) => {
-    try {
-      const orgId = parseInt(req.params.orgId);
-      console.log("Fetching facilities for organization:", orgId);
-      const facilities = await dbStorage.getFacilitiesByOrganization(orgId);
-      console.log("Facilities found:", facilities);
-      res.setHeader('Content-Type', 'application/json');
-      res.json(facilities);
-    } catch (error) {
-      console.error("Error fetching facilities:", error);
-      res.status(500).json({ error: "Failed to fetch facilities" });
-    }
-  });
-
   // Create building (super admin only)
   app.post("/api/admin/buildings", authMiddleware, async (req: any, res) => {
     try {
@@ -842,53 +798,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create organization (super admin only)
-  app.post("/api/admin/organizations", async (req: any, res) => {
-    try {
-      console.log("Creating organization:", req.body);
-      const { name, slug, domain, logoUrl } = req.body;
-
-      // Validate required fields
-      if (!name || !slug) {
-        return res.status(400).json({ error: "Name and slug are required" });
-      }
-
-      const organization = await dbStorage.createOrganization({
-        name,
-        slug,
-        domain: domain || null,
-        logoUrl: logoUrl || null,
-        settings: {}
-      });
-
-      console.log("Organization created:", organization);
-      res.json(organization);
-    } catch (error) {
-      console.error("Error creating organization:", error);
-      res.status(500).json({ error: "Failed to create organization" });
-    }
-  });
-
-  // Update organization (super admin only)
-  app.patch("/api/admin/organizations/:id", async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const { name, domain, logoUrl } = req.body;
-
-      console.log("Updating organization:", id, req.body);
-      const organization = await dbStorage.updateOrganization(parseInt(id), {
-        name,
-        domain: domain || null,
-        logoUrl: logoUrl || null
-      });
-
-      res.json(organization);
-    } catch (error) {
-      console.error("Error updating organization:", error);
-      res.status(500).json({ error: "Failed to update organization" });
-    }
-  });
-
   // Set up multer storage configuration
   const uploadDir = path.resolve(process.cwd(), 'uploads/photos');
 
@@ -1015,62 +924,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // No auth found
     return res.status(401).json({ message: "Unauthorized" });
   };
-
-  // Dashboard stats
-  app.get("/api/dashboard/stats", authMiddleware, async (req: any, res) => {
-    try {
-      const user = req.user;
-      const userId = user?.id;
-
-      if (!userId || !user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      let stats;
-      if (user?.role === 'super_admin') {
-        // Super admins see all data
-        stats = await dbStorage.getAdminDashboardStats();
-      } else if (user?.role === 'admin' || user?.role === 'maintenance') {
-        // Regular admins see only their organization's data
-        stats = await dbStorage.getAdminDashboardStats(user.organizationId!);
-      } else {
-        stats = await dbStorage.getUserDashboardStats(userId);
-      }
-
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
-    }
-  });
-
-  // Get recent requests
-  app.get("/api/requests/recent", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.userId;
-      const user = req.user;
-
-      if (!userId || !user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      let requests;
-      if (user?.role === 'super_admin') {
-        // Super admins see all data
-        requests = await dbStorage.getRecentRequests(10);
-      } else if (user?.role === 'admin' || user?.role === 'maintenance') {
-        // Regular admins see only their organization's data
-        requests = await dbStorage.getRecentRequests(10, user.organizationId!);
-      } else {
-        requests = await dbStorage.getUserRequests(userId, 10);
-      }
-
-      res.json(requests);
-    } catch (error) {
-      console.error("Error fetching recent requests:", error);
-      res.status(500).json({ message: "Failed to fetch recent requests" });
-    }
-  });
 
   // Get all maintenance staff
   app.get("/api/users/maintenance", authMiddleware, async (req: any, res) => {
@@ -1540,36 +1393,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct test route for status updates (bypassing auth temporarily)
-  app.post("/api/requests/:id/status-test", async (req: any, res) => {
-    try {
-      console.log("=== DIRECT STATUS UPDATE TEST ===");
-      console.log("Request ID:", req.params.id);
-
-      const requestId = parseInt(req.params.id);
-
-      // Simplified status update without auth check
-      const statusUpdateData = {
-        requestId,
-        status: req.body.status,
-        updatedById: req.user?.id || "test-user",
-        note: req.body.note || "Test status update"
-      };
-
-      console.log("Status update data:", statusUpdateData);
-
-      await dbStorage.updateRequestStatus(statusUpdateData);
-
-      res.json({ success: true, message: "Direct test successful" });
-    } catch (error) {
-      console.error("Direct test error:", error);
-      res.status(500).json({
-        message: "Direct test failed",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
   // Update request status
   app.post("/api/requests/:id/status", authMiddleware, async (req: any, res) => {
     try {
@@ -1652,76 +1475,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Super Admin API routes for managing buildings and facilities
 
-  // Test route to check organizations data directly
-  app.get("/api/test/organizations", async (req: any, res) => {
-    try {
-      const organizations = await dbStorage.getAllOrganizations();
-      console.log("Test route - organizations:", organizations);
-      res.json(organizations);
-    } catch (error: any) {
-      console.error("Test route error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Temporary unauthenticated route for organizations
-  app.get("/api/orgs-temp", async (req: any, res) => {
-    try {
-      console.log("Temporary orgs route called");
-      const organizations = await dbStorage.getAllOrganizations();
-      console.log("Temp route organizations:", organizations);
-      res.json(organizations);
-    } catch (error: any) {
-      console.error("Temp route error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Get all organizations (super admin only) - with extensive debugging
-  app.get("/api/admin/organizations", async (req: any, res) => {
-    console.log("=== Organizations API Debug ===");
-    console.log("Request headers:", req.headers);
-    console.log("Request user:", req.user);
-
-    try {
-      // Skip authentication temporarily to identify the issue
-      console.log("Bypassing auth check temporarily");
-
-      const organizations = await dbStorage.getAllOrganizations();
-      console.log("Organizations retrieved successfully:", organizations);
-      res.json(organizations);
-    } catch (error: any) {
-      console.error("Error fetching organizations:", error);
-      res.status(500).json({ message: "Failed to fetch organizations", error: error.message });
-    }
-  });
-
-  // Create organization (super admin only)
-  app.post("/api/admin/organizations", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const orgData = {
-        name: req.body.name,
-        slug: req.body.slug,
-        domain: req.body.domain,
-        logoUrl: req.body.logoUrl,
-        settings: req.body.settings || {}
-      };
-
-      const organization = await dbStorage.createOrganization(orgData);
-      res.json(organization);
-    } catch (error) {
-      console.error("Error creating organization:", error);
-      res.status(500).json({ message: "Failed to create organization" });
-    }
-  });
-
   // Get buildings for a specific organization (super admin only)
   app.get("/api/admin/buildings/:orgId", authMiddleware, async (req: any, res) => {
     try {
@@ -1738,102 +1491,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching buildings:", error);
       res.status(500).json({ message: "Failed to fetch buildings" });
-    }
-  });
-
-  // Create building (super admin only)
-  app.post("/api/admin/buildings", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      // Ensure roomNumbers is always an array
-      let roomNumbers = [];
-      if (Array.isArray(req.body.roomNumbers)) {
-        roomNumbers = req.body.roomNumbers;
-      } else if (typeof req.body.roomNumbers === 'string' && req.body.roomNumbers.trim() !== '') {
-        roomNumbers = req.body.roomNumbers.split(',').map((s: string) => s.trim());
-      }
-      const buildingData = {
-        organizationId: req.body.organizationId,
-        name: req.body.name,
-        address: req.body.address,
-        description: req.body.description,
-        room_numbers: roomNumbers, // Always an array
-        isActive: true,
-      };
-
-      const building = await dbStorage.createBuilding(buildingData);
-      // Map DB result to ensure roomNumbers is always an array
-      const result = {
-        ...building,
-        roomNumbers: building.roomNumbers ?? [],
-      };
-      res.json(result);
-    } catch (error) {
-      console.error("Error creating building:", error);
-      res.status(500).json({ message: "Failed to create building" });
-    }
-  });
-
-  // Update building (super admin only)
-  app.patch("/api/admin/buildings/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const buildingId = parseInt(req.params.id);
-      // Ensure roomNumbers is always an array
-      let updateRoomNumbers = [];
-      if (Array.isArray(req.body.roomNumbers)) {
-        updateRoomNumbers = req.body.roomNumbers;
-      } else if (typeof req.body.roomNumbers === 'string' && req.body.roomNumbers.trim() !== '') {
-        updateRoomNumbers = req.body.roomNumbers.split(',').map((s: string) => s.trim());
-      }
-      const updates = {
-        name: req.body.name,
-        address: req.body.address,
-        description: req.body.description,
-        room_numbers: updateRoomNumbers, // Always an array
-      };
-
-      const building = await dbStorage.updateBuilding(buildingId, updates);
-      // Map DB result to ensure roomNumbers is always an array
-      const result = {
-        ...building,
-        roomNumbers: building.roomNumbers ?? [],
-      };
-      res.json(result);
-    } catch (error) {
-      console.error("Error updating building:", error);
-      res.status(500).json({ message: "Failed to update building" });
-    }
-  });
-
-  // Delete building (super admin only)
-  app.delete("/api/admin/buildings/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const buildingId = parseInt(req.params.id);
-      await dbStorage.deleteBuilding(buildingId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting building:", error);
-      res.status(500).json({ message: "Failed to delete building" });
     }
   });
 
@@ -2008,249 +1665,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create facility (super admin only)
-  app.post("/api/admin/facilities", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const facilityData = req.body;
-      const facility = await dbStorage.createFacility(facilityData);
-      res.json(facility);
-    } catch (error) {
-      console.error("Error creating facility:", error);
-      res.status(500).json({ message: "Failed to create facility" });
-    }
-  });
-
-  // Update facility (super admin only)
-  app.patch("/api/admin/facilities/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const facilityId = parseInt(req.params.id);
-      const updates = req.body;
-      const facility = await dbStorage.updateFacility(facilityId, updates);
-      res.json(facility);
-    } catch (error) {
-      console.error("Error updating facility:", error);
-      res.status(500).json({ message: "Failed to update facility" });
-    }
-  });
-
-  // Delete facility (super admin only)
-  app.delete("/api/admin/facilities/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const facilityId = parseInt(req.params.id);
-      await dbStorage.deleteFacility(facilityId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting facility:", error);
-      res.status(500).json({ message: "Failed to delete facility" });
-    }
-  });
-
-  // Get facilities for a specific organization (super admin only)
-  app.get("/api/admin/facilities/:orgId", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const orgId = parseInt(req.params.orgId);
-      const facilities = await dbStorage.getFacilitiesByOrganization(orgId);
-      res.json(facilities);
-    } catch (error) {
-      console.error("Error fetching facilities:", error);
-      res.status(500).json({ message: "Failed to fetch facilities" });
-    }
-  });
-
-  // Create building (super admin only)
-  app.post("/api/admin/buildings", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      // Ensure roomNumbers is always an array
-      let roomNumbers = [];
-      if (Array.isArray(req.body.roomNumbers)) {
-        roomNumbers = req.body.roomNumbers;
-      } else if (typeof req.body.roomNumbers === 'string' && req.body.roomNumbers.trim() !== '') {
-        roomNumbers = req.body.roomNumbers.split(',').map((s: string) => s.trim());
-      }
-      const buildingData = {
-        organizationId: req.body.organizationId,
-        name: req.body.name,
-        address: req.body.address,
-        description: req.body.description,
-        room_numbers: roomNumbers, // Always an array
-        isActive: true,
-      };
-
-      const building = await dbStorage.createBuilding(buildingData);
-      // Map DB result to ensure roomNumbers is always an array
-      const result = {
-        ...building,
-        roomNumbers: building.room_numbers ?? [],
-      };
-      res.json(result);
-    } catch (error) {
-      console.error("Error creating building:", error);
-      res.status(500).json({ message: "Failed to create building" });
-    }
-  });
-
-  // Update building (super admin only)
-  app.patch("/api/admin/buildings/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const buildingId = parseInt(req.params.id);
-      // Ensure roomNumbers is always an array
-      let updateRoomNumbers = [];
-      if (Array.isArray(req.body.roomNumbers)) {
-        updateRoomNumbers = req.body.roomNumbers;
-      } else if (typeof req.body.roomNumbers === 'string' && req.body.roomNumbers.trim() !== '') {
-        updateRoomNumbers = req.body.roomNumbers.split(',').map((s: string) => s.trim());
-      }
-      const updates = {
-        name: req.body.name,
-        address: req.body.address,
-        description: req.body.description,
-        roomNumbers: updateRoomNumbers, // Always an array
-      };
-
-      const building = await dbStorage.updateBuilding(buildingId, updates);
-      // Map DB result to ensure roomNumbers is always an array
-      const result = {
-        ...building,
-        roomNumbers: building.roomNumbers ?? [],
-      };
-      res.json(result);
-    } catch (error) {
-      console.error("Error updating building:", error);
-      res.status(500).json({ message: "Failed to update building" });
-    }
-  });
-
-  // Delete building (super admin only)
-  app.delete("/api/admin/buildings/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const buildingId = parseInt(req.params.id);
-      await dbStorage.deleteBuilding(buildingId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting building:", error);
-      res.status(500).json({ message: "Failed to delete building" });
-    }
-  });
-
-  // Create facility (super admin only)
-  app.post("/api/admin/facilities", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const facilityData = req.body;
-      const facility = await dbStorage.createFacility(facilityData);
-      res.json(facility);
-    } catch (error) {
-      console.error("Error creating facility:", error);
-      res.status(500).json({ message: "Failed to create facility" });
-    }
-  });
-
-  // Update facility (super admin only)
-  app.patch("/api/admin/facilities/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const facilityId = parseInt(req.params.id);
-      const updates = req.body;
-      const facility = await dbStorage.updateFacility(facilityId, updates);
-      res.json(facility);
-    } catch (error) {
-      console.error("Error updating facility:", error);
-      res.status(500).json({ message: "Failed to update facility" });
-    }
-  });
-
-  // Delete facility (super admin only)
-  app.delete("/api/admin/facilities/:id", authMiddleware, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await dbStorage.getUser(userId);
-
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
-      }
-
-      const facilityId = parseInt(req.params.id);
-      await dbStorage.deleteFacility(facilityId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting facility:", error);
-      res.status(500).json({ message: "Failed to delete facility" });
-    }
-  });
-
-  // Get reports data (admin only)
+  // Get reports data (admin/super_admin only)
   app.get("/api/reports", authMiddleware, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const user = await dbStorage.getUser(userId);
 
-      if (user?.role !== 'admin') {
-        return res.status(403).json({ message: "Unauthorized" });
+      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const reportType = req.query.type || 'monthly';
-      const reports = await dbStorage.getReportsData(reportType);
+
+      // Get organization ID for filtering (null for super_admin to get all)
+      const orgId = user.role === 'super_admin' ? undefined : user.organizationId ?? undefined;
+
+      const reports = await dbStorage.getReportsData(reportType, orgId);
 
       res.json(reports);
     } catch (error) {
@@ -2365,17 +1799,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("=== /api/room-buildings endpoint called ===");
 
-      // Get building names from building_requests table
-      const buildingNames = await dbStorage.getAllBuildings();
+      const { userId } = await getUserInfo(req);
+      const user = await dbStorage.getUser(userId);
+
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Get organization ID for filtering (null for super_admin to get all)
+      const orgId = user.role === 'super_admin' ? undefined : user.organizationId ?? undefined;
+
+      // Get building names from building_requests table filtered by org
+      const buildingNames = await dbStorage.getAllBuildings(orgId);
       console.log("Building names from getAllBuildings:", buildingNames);
 
       // If no building names found in building_requests, fall back to buildings table names
       if (!buildingNames || buildingNames.length === 0) {
         console.log("No buildings found in building_requests, checking buildings table");
-        const { userId } = await getUserInfo(req);
-        const user = await dbStorage.getUser(userId);
 
-        if (user?.organizationId) {
+        if (user.organizationId) {
           const buildings = await dbStorage.getBuildingsByOrganization(user.organizationId);
           const names = buildings.map((building: any) => building.name);
           console.log("Building names from buildings table:", names);
@@ -2401,6 +1843,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      const user = await dbStorage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const building = req.query.building as string;
       const roomNumber = req.query.roomNumber as string | undefined;
 
@@ -2408,7 +1855,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Building parameter is required" });
       }
 
-      const requests = await dbStorage.getRequestsByBuilding(building, roomNumber);
+      // Get organization ID for filtering (null for super_admin to get all)
+      const orgId = user.role === 'super_admin' ? undefined : user.organizationId ?? undefined;
+
+      const requests = await dbStorage.getRequestsByBuilding(building, roomNumber, orgId);
       res.json(requests);
     } catch (error) {
       console.error("Error fetching room history:", error);
@@ -2487,6 +1937,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating organization:", error);
       res.status(500).json({ error: "Failed to update organization" });
+    }
+  });
+
+  // Delete organization (super admin only)
+  app.delete("/api/admin/organizations/:id", authMiddleware, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+
+      // Only allow super admins to delete organizations
+      if (user.role !== 'super_admin') {
+        return res.status(403).json({ error: "Access denied. Super admin required." });
+      }
+
+      const id = parseInt(req.params.id);
+      await dbStorage.deleteOrganization(id);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      res.status(500).json({ error: "Failed to delete organization" });
     }
   });
 
@@ -2710,18 +2179,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[CONTACT] Error:", error);
       res.status(500).json({ error: "Failed to submit message" });
-    }
-  });
-
-  // Delete organization (super admin only)
-  app.delete("/api/admin/organizations/:id", async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await dbStorage.deleteOrganization(id);
-      res.status(200).json({ success: true });
-    } catch (error) {
-      console.error("Error deleting organization:", error);
-      res.status(500).json({ error: "Failed to delete organization" });
     }
   });
 

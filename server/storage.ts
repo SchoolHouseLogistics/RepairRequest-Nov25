@@ -174,8 +174,8 @@ export interface IStorage {
   getAssignedRequests(userId: string): Promise<any[]>;
   
   // Room history
-  getAllBuildings(): Promise<string[]>;
-  getRequestsByBuilding(building: string, roomNumber?: string): Promise<any[]>;
+  getAllBuildings(organizationId?: number): Promise<string[]>;
+  getRequestsByBuilding(building: string, roomNumber?: string, organizationId?: number): Promise<any[]>;
   
   // Request timeline and messaging
   getRequestTimeline(requestId: number): Promise<any[]>;
@@ -193,7 +193,7 @@ export interface IStorage {
   isRequestor(userId: string, requestId: number): Promise<boolean>;
   
   // Reports
-  getReportsData(reportType: string): Promise<any>;
+  getReportsData(reportType: string, organizationId?: number): Promise<any>;
   
   // Email notifications
   getOrganizationAdminEmails(organizationId: number): Promise<string[]>;
@@ -927,21 +927,51 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateRequestStatus(statusUpdateData: InsertStatusUpdate): Promise<StatusUpdate> {
+    // Valid status values
+    const VALID_STATUSES = ['pending', 'approved', 'in-progress', 'completed', 'cancelled'];
+
+    // Valid status transitions state machine
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      'pending': ['approved', 'in-progress', 'cancelled'],
+      'approved': ['in-progress', 'completed', 'cancelled'],
+      'in-progress': ['completed', 'cancelled'],
+      'completed': ['pending'],  // Allow reopen
+      'cancelled': ['pending'],  // Allow reopen
+    };
+
+    // Validate the new status is a valid value
+    if (!VALID_STATUSES.includes(statusUpdateData.status)) {
+      throw new Error(`Invalid status value: ${statusUpdateData.status}. Must be one of: ${VALID_STATUSES.join(', ')}`);
+    }
+
+    // Get current request status
+    const [currentRequest] = await db.select().from(requests).where(eq(requests.id, statusUpdateData.requestId));
+
+    if (!currentRequest) {
+      throw new Error(`Request not found: ${statusUpdateData.requestId}`);
+    }
+
+    // Validate the status transition is allowed
+    const allowedTransitions = VALID_TRANSITIONS[currentRequest.status] || [];
+    if (!allowedTransitions.includes(statusUpdateData.status) && currentRequest.status !== statusUpdateData.status) {
+      throw new Error(`Invalid status transition: ${currentRequest.status} → ${statusUpdateData.status}. Allowed transitions from ${currentRequest.status}: ${allowedTransitions.join(', ')}`);
+    }
+
     // Create status update record
     const [statusUpdate] = await db
       .insert(statusUpdates)
       .values(statusUpdateData)
       .returning();
-    
+
     // Update request status
     await db
       .update(requests)
-      .set({ 
+      .set({
         status: statusUpdateData.status,
         updatedAt: new Date()
       })
       .where(eq(requests.id, statusUpdateData.requestId));
-    
+
     return statusUpdate;
   }
 
@@ -978,26 +1008,34 @@ export class DatabaseStorage implements IStorage {
   async canAccessRequest(userId: string, requestId: number): Promise<boolean> {
     // Get user
     const [user] = await db.select().from(users).where(eq(users.id, userId));
-    
+
     if (!user) {
       return false;
     }
-    
-    // Admin/maintenance can access all requests
-    if (user.role === 'admin' || user.role === 'maintenance') {
+
+    // Get the request to check organization
+    const [request] = await db.select().from(requests).where(eq(requests.id, requestId));
+
+    if (!request) {
+      return false;
+    }
+
+    // Super admin can access all requests
+    if (user.role === 'super_admin') {
       return true;
     }
-    
-    // Check if user is the requestor
-    const [request] = await db
-      .select()
-      .from(requests)
-      .where(and(
-        eq(requests.id, requestId),
-        eq(requests.requestorId, userId)
-      ));
-    
-    // Check if user is assigned to this request
+
+    // Admin/maintenance can access requests within their organization only
+    if (user.role === 'admin' || user.role === 'maintenance') {
+      return request.organizationId === user.organizationId;
+    }
+
+    // Regular users: Check if user is the requestor (and in same org)
+    if (request.requestorId === userId && request.organizationId === user.organizationId) {
+      return true;
+    }
+
+    // Check if user is assigned to this request (and in same org)
     const [assignment] = await db
       .select()
       .from(assignments)
@@ -1005,8 +1043,8 @@ export class DatabaseStorage implements IStorage {
         eq(assignments.requestId, requestId),
         eq(assignments.assigneeId, userId)
       ));
-    
-    return !!request || !!assignment;
+
+    return !!assignment && request.organizationId === user.organizationId;
   }
   
   async isRequestor(userId: string, requestId: number): Promise<boolean> {
@@ -1072,15 +1110,28 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Room history
-  async getAllBuildings(): Promise<string[]> {
+  async getAllBuildings(organizationId?: number): Promise<string[]> {
     try {
-      const result = await db.execute(sql`
-        SELECT DISTINCT building 
-        FROM building_requests 
-        WHERE building IS NOT NULL AND building != ''
-        ORDER BY building
-      `);
-      
+      let result;
+      if (organizationId) {
+        // Filter by organization
+        result = await db.execute(sql`
+          SELECT DISTINCT b.building
+          FROM building_requests b
+          JOIN requests r ON b.request_id = r.id
+          WHERE b.building IS NOT NULL AND b.building != '' AND r.organization_id = ${organizationId}
+          ORDER BY b.building
+        `);
+      } else {
+        // Super admin - get all buildings
+        result = await db.execute(sql`
+          SELECT DISTINCT building
+          FROM building_requests
+          WHERE building IS NOT NULL AND building != ''
+          ORDER BY building
+        `);
+      }
+
       // Extract the building names from the result
       return result.rows.map((row: any) => row.building);
     } catch (error) {
@@ -1089,15 +1140,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getRequestsByBuilding(building: string, roomNumber?: string): Promise<any[]> {
+  async getRequestsByBuilding(building: string, roomNumber?: string, organizationId?: number): Promise<any[]> {
     try {
       let query;
-      
-      if (roomNumber) {
-        // Filter by both building and room number
+
+      if (roomNumber && organizationId) {
+        // Filter by building, room number, and organization
         query = sql`
           SELECT r.*, b.building, b.room_number, b.description as building_description,
-                 u.id as requestor_id, u.first_name as requestor_first_name, 
+                 u.id as requestor_id, u.first_name as requestor_first_name,
+                 u.last_name as requestor_last_name, u.profile_image_url as requestor_image
+          FROM requests r
+          JOIN building_requests b ON r.id = b.request_id
+          LEFT JOIN users u ON r.requestor_id = u.id
+          WHERE b.building = ${building} AND b.room_number = ${roomNumber} AND r.organization_id = ${organizationId}
+          ORDER BY r.created_at DESC
+        `;
+      } else if (roomNumber) {
+        // Filter by building and room number only (super admin)
+        query = sql`
+          SELECT r.*, b.building, b.room_number, b.description as building_description,
+                 u.id as requestor_id, u.first_name as requestor_first_name,
                  u.last_name as requestor_last_name, u.profile_image_url as requestor_image
           FROM requests r
           JOIN building_requests b ON r.id = b.request_id
@@ -1105,11 +1168,23 @@ export class DatabaseStorage implements IStorage {
           WHERE b.building = ${building} AND b.room_number = ${roomNumber}
           ORDER BY r.created_at DESC
         `;
-      } else {
-        // Filter by building only
+      } else if (organizationId) {
+        // Filter by building and organization
         query = sql`
           SELECT r.*, b.building, b.room_number, b.description as building_description,
-                 u.id as requestor_id, u.first_name as requestor_first_name, 
+                 u.id as requestor_id, u.first_name as requestor_first_name,
+                 u.last_name as requestor_last_name, u.profile_image_url as requestor_image
+          FROM requests r
+          JOIN building_requests b ON r.id = b.request_id
+          LEFT JOIN users u ON r.requestor_id = u.id
+          WHERE b.building = ${building} AND r.organization_id = ${organizationId}
+          ORDER BY r.created_at DESC
+        `;
+      } else {
+        // Filter by building only (super admin)
+        query = sql`
+          SELECT r.*, b.building, b.room_number, b.description as building_description,
+                 u.id as requestor_id, u.first_name as requestor_first_name,
                  u.last_name as requestor_last_name, u.profile_image_url as requestor_image
           FROM requests r
           JOIN building_requests b ON r.id = b.request_id
@@ -1118,9 +1193,9 @@ export class DatabaseStorage implements IStorage {
           ORDER BY r.created_at DESC
         `;
       }
-      
+
       const result = await db.execute(query);
-      
+
       // Format the results
       return result.rows.map((row: any) => {
         return {
@@ -1132,6 +1207,7 @@ export class DatabaseStorage implements IStorage {
           createdAt: row.created_at,
           updatedAt: row.updated_at,
           eventDate: row.event_date,
+          organizationId: row.organization_id,
           buildingDetails: {
             building: row.building,
             roomNumber: row.room_number,
@@ -1151,12 +1227,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Reports
-  async getReportsData(reportType: string): Promise<any> {
+  async getReportsData(reportType: string, organizationId?: number): Promise<any> {
+    // Build organization filter condition
+    const orgFilter = organizationId ? eq(requests.organizationId, organizationId) : undefined;
+
     if (reportType === 'monthly') {
       // Get counts by month for the past 6 months
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      
+
+      const dateFilter = sql`requests.created_at >= ${sixMonthsAgo.toISOString()}`;
+      const whereClause = orgFilter ? and(dateFilter, orgFilter) : dateFilter;
+
       const results = await db
         .select({
           month: sql`to_char(requests.created_at, 'YYYY-MM')`,
@@ -1164,45 +1246,59 @@ export class DatabaseStorage implements IStorage {
           status: requests.status
         })
         .from(requests)
-        .where(sql`requests.created_at >= ${sixMonthsAgo.toISOString()}`)
+        .where(whereClause)
         .groupBy(sql`to_char(requests.created_at, 'YYYY-MM')`, requests.status)
         .orderBy(sql`to_char(requests.created_at, 'YYYY-MM')`);
-      
+
       return {
         type: 'monthly',
         data: results
       };
     } else if (reportType === 'facility') {
       // Get counts by facility
-      const results = await db
+      let query = db
         .select({
           facility: requests.facility,
           count: count()
         })
-        .from(requests)
+        .from(requests);
+
+      if (orgFilter) {
+        query = query.where(orgFilter) as any;
+      }
+
+      const results = await query
         .groupBy(requests.facility)
         .orderBy(desc(count()));
-      
+
       return {
         type: 'facility',
         data: results
       };
     } else if (reportType === 'status') {
       // Get current counts by status
-      const results = await db
+      let query = db
         .select({
           status: requests.status,
           count: count()
         })
-        .from(requests)
-        .groupBy(requests.status);
-      
+        .from(requests);
+
+      if (orgFilter) {
+        query = query.where(orgFilter) as any;
+      }
+
+      const results = await query.groupBy(requests.status);
+
       return {
         type: 'status',
         data: results
       };
     } else {
       // Default to completion time report
+      const completedFilter = eq(requests.status, 'completed');
+      const whereClause = orgFilter ? and(completedFilter, orgFilter) : completedFilter;
+
       const results = await db
         .select({
           request: requests,
@@ -1224,8 +1320,8 @@ export class DatabaseStorage implements IStorage {
             eq(sql`completed_status.status`, 'completed')
           )
         )
-        .where(eq(requests.status, 'completed'));
-      
+        .where(whereClause);
+
       return {
         type: 'completion',
         data: results.map(item => ({
@@ -1234,8 +1330,8 @@ export class DatabaseStorage implements IStorage {
           event: item.request.event,
           created: item.created,
           completed: item.completed,
-          timeToComplete: item.completed && item.created 
-            ? Math.round((new Date(item.completed).getTime() - new Date(item.created).getTime()) / (1000 * 60 * 60 * 24)) 
+          timeToComplete: item.completed && item.created
+            ? Math.round((new Date(item.completed).getTime() - new Date(item.created).getTime()) / (1000 * 60 * 60 * 24))
             : null
         }))
       };
