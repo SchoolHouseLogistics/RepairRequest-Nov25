@@ -163,8 +163,11 @@ export const requests = pgTable(
     index("IDX_requests_event_date").on(table.eventDate),
     index("IDX_requests_created_at").on(table.createdAt),
     index("IDX_requests_deleted_at").on(table.deletedAt),
-    // Composite index for common multi-tenant status queries
+    // Composite indexes for common query patterns
     index("IDX_requests_org_status").on(table.organizationId, table.status),
+    index("IDX_requests_org_status_created").on(table.organizationId, table.status, table.createdAt),
+    index("IDX_requests_requestor_status").on(table.requestorId, table.status),
+    index("IDX_requests_org_deleted").on(table.organizationId, table.deletedAt),
   ]
 );
 
@@ -251,6 +254,141 @@ export const organizationFeatures = pgTable(
   },
   (table) => [
     index("IDX_organization_features_org_id").on(table.organizationId),
+  ]
+);
+
+// Audit logs for tracking all changes (B2B compliance requirement)
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").references(() => organizations.id),
+    userId: varchar("user_id").references(() => users.id),
+    action: varchar("action").notNull(), // create, update, delete, login, logout, etc.
+    resourceType: varchar("resource_type").notNull(), // request, user, organization, etc.
+    resourceId: varchar("resource_id"), // ID of the affected resource
+    changes: jsonb("changes"), // {field: {old: value, new: value}}
+    metadata: jsonb("metadata"), // Additional context (IP, user agent, etc.)
+    ipAddress: varchar("ip_address"),
+    userAgent: text("user_agent"),
+    timestamp: timestamp("timestamp").defaultNow(),
+  },
+  (table) => [
+    index("IDX_audit_logs_org_id").on(table.organizationId),
+    index("IDX_audit_logs_user_id").on(table.userId),
+    index("IDX_audit_logs_timestamp").on(table.timestamp),
+    index("IDX_audit_logs_resource").on(table.resourceType, table.resourceId),
+    index("IDX_audit_logs_action").on(table.action),
+  ]
+);
+
+// Webhooks for external integrations
+export const webhooks = pgTable(
+  "webhooks",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name").notNull(),
+    url: varchar("url", { length: 2000 }).notNull(),
+    secret: varchar("secret", { length: 64 }).notNull(), // HMAC signing secret
+    events: jsonb("events").notNull(), // ['request.created', 'request.status_changed', etc.]
+    active: boolean("active").default(true),
+    createdById: varchar("created_by_id").references(() => users.id),
+    lastTriggeredAt: timestamp("last_triggered_at"),
+    failureCount: integer("failure_count").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_webhooks_org_id").on(table.organizationId),
+    index("IDX_webhooks_active").on(table.active),
+  ]
+);
+
+// Webhook delivery logs for debugging
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: serial("id").primaryKey(),
+    webhookId: integer("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+    event: varchar("event").notNull(),
+    payload: jsonb("payload").notNull(),
+    responseStatus: integer("response_status"),
+    responseBody: text("response_body"),
+    success: boolean("success").default(false),
+    attemptCount: integer("attempt_count").default(1),
+    nextRetryAt: timestamp("next_retry_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_webhook_deliveries_webhook_id").on(table.webhookId),
+    index("IDX_webhook_deliveries_created_at").on(table.createdAt),
+    index("IDX_webhook_deliveries_success").on(table.success),
+  ]
+);
+
+// API keys for programmatic access
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name").notNull(),
+    keyPrefix: varchar("key_prefix", { length: 8 }).notNull(), // First 8 chars for identification
+    keyHash: varchar("key_hash").notNull(), // Hashed API key
+    permissions: jsonb("permissions").notNull(), // ['requests:read', 'requests:write', etc.]
+    createdById: varchar("created_by_id").references(() => users.id),
+    lastUsedAt: timestamp("last_used_at"),
+    expiresAt: timestamp("expires_at"),
+    revokedAt: timestamp("revoked_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_api_keys_org_id").on(table.organizationId),
+    index("IDX_api_keys_key_prefix").on(table.keyPrefix),
+    index("IDX_api_keys_expires_at").on(table.expiresAt),
+  ]
+);
+
+// Request templates for common request types
+export const requestTemplates = pgTable(
+  "request_templates",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    name: varchar("name").notNull(),
+    description: text("description"),
+    requestType: varchar("request_type").notNull(), // facilities, building, tech
+    facility: varchar("facility"),
+    defaultPriority: varchar("default_priority").default("medium"),
+    fields: jsonb("fields"), // Pre-filled field values
+    createdById: varchar("created_by_id").references(() => users.id),
+    isActive: boolean("is_active").default(true),
+    usageCount: integer("usage_count").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_request_templates_org_id").on(table.organizationId),
+    index("IDX_request_templates_type").on(table.requestType),
+    index("IDX_request_templates_active").on(table.isActive),
+  ]
+);
+
+// Rate limiting tracking table
+export const rateLimitRecords = pgTable(
+  "rate_limit_records",
+  {
+    id: serial("id").primaryKey(),
+    key: varchar("key").notNull(), // Could be IP, user ID, or combination
+    endpoint: varchar("endpoint").notNull(),
+    requestCount: integer("request_count").default(1),
+    windowStart: timestamp("window_start").defaultNow(),
+    windowEnd: timestamp("window_end").notNull(),
+  },
+  (table) => [
+    index("IDX_rate_limit_key_endpoint").on(table.key, table.endpoint),
+    index("IDX_rate_limit_window_end").on(table.windowEnd),
   ]
 );
 
@@ -470,6 +608,59 @@ export type RequestPhoto = typeof requestPhotos.$inferSelect;
 
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 export type ContactMessage = typeof contactMessages.$inferSelect;
+
+// Audit log schemas and types
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Webhook schemas and types
+export const insertWebhookSchema = createInsertSchema(webhooks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastTriggeredAt: true,
+  failureCount: true,
+});
+export type InsertWebhook = z.infer<typeof insertWebhookSchema>;
+export type Webhook = typeof webhooks.$inferSelect;
+
+export const insertWebhookDeliverySchema = createInsertSchema(webhookDeliveries).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWebhookDelivery = z.infer<typeof insertWebhookDeliverySchema>;
+export type WebhookDelivery = typeof webhookDeliveries.$inferSelect;
+
+// API key schemas and types
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+  revokedAt: true,
+});
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// Request template schemas and types
+export const insertRequestTemplateSchema = createInsertSchema(requestTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  usageCount: true,
+});
+export type InsertRequestTemplate = z.infer<typeof insertRequestTemplateSchema>;
+export type RequestTemplate = typeof requestTemplates.$inferSelect;
+
+// Rate limit schemas and types
+export const insertRateLimitRecordSchema = createInsertSchema(rateLimitRecords).omit({
+  id: true,
+});
+export type InsertRateLimitRecord = z.infer<typeof insertRateLimitRecordSchema>;
+export type RateLimitRecord = typeof rateLimitRecords.$inferSelect;
 
 
 
