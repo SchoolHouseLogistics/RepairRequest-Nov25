@@ -31,6 +31,7 @@ import {
   insertRequestSchema,
   insertRequestItemsSchema,
   insertBuildingRequestSchema,
+  insertTechRequestSchema,
   insertMessageSchema,
   insertAssignmentSchema,
   insertStatusUpdateSchema,
@@ -1147,6 +1148,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create a new tech request
+  app.post("/api/tech-requests", authMiddleware, async (req: any, res) => {
+    try {
+      const user = req.user as AuthenticatedUser;
+      const userId = user?.id;
+
+      if (!userId || !user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Check if tech requests are enabled for this organization
+      if (user.organizationId) {
+        const isEnabled = await dbStorage.isTechRequestsEnabled(user.organizationId);
+        if (!isEnabled) {
+          return res.status(403).json({
+            message: "Tech requests are not enabled for your organization",
+            code: "TECH_REQUESTS_DISABLED"
+          });
+        }
+      }
+
+      // Parse and validate tech request fields
+      const {
+        category,
+        deviceType,
+        deviceLocation,
+        assetTag,
+        description,
+        errorMessage,
+        stepsToReproduce,
+        urgencyReason,
+        event,
+        eventDate,
+        priority
+      } = req.body;
+
+      // Validate required fields
+      if (!category || !description) {
+        return res.status(400).json({
+          message: "Missing required fields: category, description"
+        });
+      }
+
+      // Create the base request
+      const requestData = insertRequestSchema.parse({
+        requestType: "tech",
+        facility: category, // Use category as facility for consistency
+        event: event || `Tech Support: ${category}`,
+        eventDate: eventDate || new Date().toISOString().split('T')[0],
+        priority: priority || "medium",
+        requestorId: userId,
+        organizationId: user.organizationId
+      });
+
+      const createdRequest = await dbStorage.createRequest(requestData);
+
+      // Create the tech request details
+      const techRequestData = insertTechRequestSchema.parse({
+        requestId: createdRequest.id,
+        category,
+        deviceType: deviceType || null,
+        deviceLocation: deviceLocation || null,
+        assetTag: assetTag || null,
+        description,
+        errorMessage: errorMessage || null,
+        stepsToReproduce: stepsToReproduce || null,
+        urgencyReason: urgencyReason || null
+      });
+
+      await dbStorage.createTechRequest(techRequestData);
+
+      // Create initial status update
+      await dbStorage.createStatusUpdate({
+        requestId: createdRequest.id,
+        status: "pending",
+        updatedById: userId,
+        note: `Tech request submitted: ${category}`
+      });
+
+      // Send email notifications
+      try {
+        const organization = user.organizationId !== undefined
+          ? await dbStorage.getOrganization(user.organizationId)
+          : undefined;
+        const adminEmails = user.organizationId !== undefined
+          ? await dbStorage.getOrganizationAdminEmails(user.organizationId)
+          : [];
+
+        if (organization && adminEmails.length > 0) {
+          await sendRequestNotificationEmails({
+            requestId: createdRequest.id,
+            title: `Tech Support: ${category}`,
+            building: deviceLocation || 'Not specified',
+            roomNumber: '',
+            description,
+            priority: priority || 'medium',
+            requesterName: `${user.firstName} ${user.lastName}`,
+            requesterEmail: user.email,
+            organizationName: organization.name,
+            createdAt: new Date()
+          }, adminEmails);
+        }
+      } catch (emailError) {
+        console.error("Email notification error:", emailError);
+      }
+
+      res.status(201).json(createdRequest);
+    } catch (error) {
+      console.error("Error creating tech request:", error);
+      res.status(500).json({
+        message: "Failed to create tech request",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Check if tech requests are enabled for an organization
+  app.get("/api/organization-features", authMiddleware, async (req: any, res) => {
+    try {
+      const user = req.user as AuthenticatedUser;
+
+      if (!user || !user.organizationId) {
+        return res.status(400).json({ message: "No organization assigned to user" });
+      }
+
+      const features = await dbStorage.getOrganizationFeatures(user.organizationId);
+
+      // Return default values if no features record exists
+      res.json({
+        techRequestsEnabled: features?.techRequestsEnabled ?? false,
+        buildingRequestsEnabled: features?.buildingRequestsEnabled ?? true,
+        facilitiesRequestsEnabled: features?.facilitiesRequestsEnabled ?? true
+      });
+    } catch (error) {
+      console.error("Error fetching organization features:", error);
+      res.status(500).json({ message: "Failed to fetch organization features" });
+    }
+  });
+
   // Get user's requests by status
   app.get("/api/requests/my", authMiddleware, async (req: any, res) => {
     try {
@@ -1916,6 +2056,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting organization:", error);
       res.status(500).json({ error: "Failed to delete organization" });
+    }
+  });
+
+  // Get organization features (super admin only)
+  app.get("/api/admin/organizations/:id/features", authMiddleware, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+
+      if (user.role !== 'super_admin') {
+        return res.status(403).json({ error: "Access denied. Super admin required." });
+      }
+
+      const organizationId = parseInt(req.params.id);
+      if (isNaN(organizationId)) {
+        return res.status(400).json({ error: "Invalid organization ID" });
+      }
+
+      // Verify organization exists
+      const organization = await dbStorage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      const features = await dbStorage.getOrganizationFeatures(organizationId);
+
+      res.json({
+        organizationId,
+        organizationName: organization.name,
+        features: {
+          techRequestsEnabled: features?.techRequestsEnabled ?? false,
+          buildingRequestsEnabled: features?.buildingRequestsEnabled ?? true,
+          facilitiesRequestsEnabled: features?.facilitiesRequestsEnabled ?? true
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching organization features:", error);
+      res.status(500).json({ error: "Failed to fetch organization features" });
+    }
+  });
+
+  // Update organization features (super admin only)
+  app.put("/api/admin/organizations/:id/features", authMiddleware, async (req: any, res) => {
+    try {
+      const user = req.user as any;
+
+      if (user.role !== 'super_admin') {
+        return res.status(403).json({ error: "Access denied. Super admin required." });
+      }
+
+      const organizationId = parseInt(req.params.id);
+      if (isNaN(organizationId)) {
+        return res.status(400).json({ error: "Invalid organization ID" });
+      }
+
+      // Verify organization exists
+      const organization = await dbStorage.getOrganization(organizationId);
+      if (!organization) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      const { techRequestsEnabled, buildingRequestsEnabled, facilitiesRequestsEnabled } = req.body;
+
+      // Validate at least one feature flag is provided
+      if (techRequestsEnabled === undefined && buildingRequestsEnabled === undefined && facilitiesRequestsEnabled === undefined) {
+        return res.status(400).json({ error: "At least one feature flag must be provided" });
+      }
+
+      // Build update object with only provided fields
+      const updateData: {
+        techRequestsEnabled?: boolean;
+        buildingRequestsEnabled?: boolean;
+        facilitiesRequestsEnabled?: boolean;
+      } = {};
+
+      if (typeof techRequestsEnabled === 'boolean') {
+        updateData.techRequestsEnabled = techRequestsEnabled;
+      }
+      if (typeof buildingRequestsEnabled === 'boolean') {
+        updateData.buildingRequestsEnabled = buildingRequestsEnabled;
+      }
+      if (typeof facilitiesRequestsEnabled === 'boolean') {
+        updateData.facilitiesRequestsEnabled = facilitiesRequestsEnabled;
+      }
+
+      const updatedFeatures = await dbStorage.upsertOrganizationFeatures(organizationId, updateData);
+
+      res.json({
+        organizationId,
+        organizationName: organization.name,
+        features: {
+          techRequestsEnabled: updatedFeatures.techRequestsEnabled,
+          buildingRequestsEnabled: updatedFeatures.buildingRequestsEnabled,
+          facilitiesRequestsEnabled: updatedFeatures.facilitiesRequestsEnabled
+        },
+        message: "Organization features updated successfully"
+      });
+    } catch (error) {
+      console.error("Error updating organization features:", error);
+      res.status(500).json({ error: "Failed to update organization features" });
     }
   });
 

@@ -3,6 +3,8 @@ import {
   requests,
   requestItems,
   buildingRequests,
+  techRequests,
+  organizationFeatures,
   assignments,
   messages,
   statusUpdates,
@@ -19,6 +21,10 @@ import {
   type RequestItems,
   type InsertBuildingRequest,
   type BuildingRequest,
+  type InsertTechRequest,
+  type TechRequest,
+  type InsertOrganizationFeatures,
+  type OrganizationFeatures,
   type InsertMessage,
   type Message,
   type InsertAssignment,
@@ -157,8 +163,15 @@ export interface IStorage {
   // Request operations
   createRequest(requestData: InsertRequest, requestItemsData?: InsertRequestItems): Promise<Request>;
   createBuildingRequest(buildingRequestData: InsertBuildingRequest): Promise<BuildingRequest>;
+  createTechRequest(techRequestData: InsertTechRequest): Promise<TechRequest>;
+  getTechRequestByRequestId(requestId: number): Promise<TechRequest | undefined>;
   getRequestById(id: number): Promise<Request | undefined>;
   getRequestDetails(id: number): Promise<any>;
+
+  // Organization features
+  getOrganizationFeatures(organizationId: number): Promise<OrganizationFeatures | undefined>;
+  upsertOrganizationFeatures(organizationId: number, features: Partial<InsertOrganizationFeatures>): Promise<OrganizationFeatures>;
+  isTechRequestsEnabled(organizationId: number): Promise<boolean>;
   
   // Photo uploads
   saveRequestPhoto(photoData: InsertRequestPhoto & { fileBuffer?: Buffer }): Promise<RequestPhoto>;
@@ -466,15 +479,68 @@ export class DatabaseStorage implements IStorage {
   
   // Create building request separately
   async createBuildingRequest(buildingRequestData: InsertBuildingRequest): Promise<BuildingRequest> {
-    // Create the building request details
     const [buildingRequest] = await db
       .insert(buildingRequests)
       .values(buildingRequestData)
       .returning();
-      
+
     return buildingRequest;
   }
-  
+
+  // Create tech request
+  async createTechRequest(techRequestData: InsertTechRequest): Promise<TechRequest> {
+    const [techRequest] = await db
+      .insert(techRequests)
+      .values(techRequestData)
+      .returning();
+
+    return techRequest;
+  }
+
+  // Get tech request by request ID
+  async getTechRequestByRequestId(requestId: number): Promise<TechRequest | undefined> {
+    const [techRequest] = await db
+      .select()
+      .from(techRequests)
+      .where(eq(techRequests.requestId, requestId));
+    return techRequest;
+  }
+
+  // Organization features methods
+  async getOrganizationFeatures(organizationId: number): Promise<OrganizationFeatures | undefined> {
+    const [features] = await db
+      .select()
+      .from(organizationFeatures)
+      .where(eq(organizationFeatures.organizationId, organizationId));
+    return features;
+  }
+
+  async upsertOrganizationFeatures(
+    organizationId: number,
+    features: Partial<InsertOrganizationFeatures>
+  ): Promise<OrganizationFeatures> {
+    const [result] = await db
+      .insert(organizationFeatures)
+      .values({
+        organizationId,
+        ...features,
+      })
+      .onConflictDoUpdate({
+        target: organizationFeatures.organizationId,
+        set: {
+          ...features,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async isTechRequestsEnabled(organizationId: number): Promise<boolean> {
+    const features = await this.getOrganizationFeatures(organizationId);
+    return features?.techRequestsEnabled ?? false;
+  }
+
   async getRequestById(id: number): Promise<Request | undefined> {
     const [request] = await db.select().from(requests).where(
       and(eq(requests.id, id), isNull(requests.deletedAt))
@@ -494,14 +560,15 @@ export class DatabaseStorage implements IStorage {
     
     let items = null;
     let buildingDetails = null;
-    
+    let techDetails = null;
+
     // Get details based on request type
     if (request.requestType === 'facilities') {
-      // Get request items for facilities requests
       [items] = await db.select().from(requestItems).where(eq(requestItems.requestId, id));
     } else if (request.requestType === 'building') {
-      // Get building request details
       [buildingDetails] = await db.select().from(buildingRequests).where(eq(buildingRequests.requestId, id));
+    } else if (request.requestType === 'tech') {
+      [techDetails] = await db.select().from(techRequests).where(eq(techRequests.requestId, id));
     }
     
     // Get requestor info
@@ -523,6 +590,7 @@ export class DatabaseStorage implements IStorage {
       ...request,
       items,
       buildingDetails,
+      techDetails,
       requestor: requestor ? {
         id: requestor.id,
         name: `${requestor.firstName || ''} ${requestor.lastName || ''}`.trim(),

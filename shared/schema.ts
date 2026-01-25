@@ -140,7 +140,7 @@ export const requests = pgTable(
   {
     id: serial("id").primaryKey(),
     organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
-    requestType: varchar("request_type").notNull().default("facilities"), // facilities or building
+    requestType: varchar("request_type").notNull().default("facilities"), // facilities, building, or tech
     facility: varchar("facility").notNull(),
     event: varchar("event").notNull(),
     eventDate: date("event_date").notNull(),
@@ -213,6 +213,44 @@ export const buildingRequests = pgTable(
     index("IDX_building_requests_request_id").on(table.requestId),
     index("IDX_building_requests_building").on(table.building),
     index("IDX_building_requests_building_room").on(table.building, table.roomNumber),
+  ]
+);
+
+// Tech request details table
+export const techRequests = pgTable(
+  "tech_requests",
+  {
+    id: serial("id").primaryKey(),
+    requestId: integer("request_id").notNull().references(() => requests.id),
+    category: varchar("category").notNull(), // hardware, software, network, other
+    deviceType: varchar("device_type"), // computer, printer, projector, phone, other
+    deviceLocation: varchar("device_location"), // building/room where device is located
+    assetTag: varchar("asset_tag"), // optional asset tracking number
+    description: text("description").notNull(),
+    errorMessage: text("error_message"), // any error messages displayed
+    stepsToReproduce: text("steps_to_reproduce"), // how to reproduce the issue
+    urgencyReason: text("urgency_reason"), // why this is urgent (if high/urgent priority)
+  },
+  (table) => [
+    index("IDX_tech_requests_request_id").on(table.requestId),
+    index("IDX_tech_requests_category").on(table.category),
+  ]
+);
+
+// Organization feature flags table
+export const organizationFeatures = pgTable(
+  "organization_features",
+  {
+    id: serial("id").primaryKey(),
+    organizationId: integer("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }).unique(),
+    techRequestsEnabled: boolean("tech_requests_enabled").default(false),
+    buildingRequestsEnabled: boolean("building_requests_enabled").default(true),
+    facilitiesRequestsEnabled: boolean("facilities_requests_enabled").default(true),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("IDX_organization_features_org_id").on(table.organizationId),
   ]
 );
 
@@ -327,6 +365,16 @@ export const insertBuildingRequestSchema = createInsertSchema(buildingRequests).
   id: true,
 });
 
+export const insertTechRequestSchema = createInsertSchema(techRequests).omit({
+  id: true,
+});
+
+export const insertOrganizationFeaturesSchema = createInsertSchema(organizationFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertAssignmentSchema = createInsertSchema(assignments).omit({
   id: true,
   assignedAt: true,
@@ -401,6 +449,12 @@ export type RequestItems = typeof requestItems.$inferSelect;
 
 export type InsertBuildingRequest = z.infer<typeof insertBuildingRequestSchema>;
 export type BuildingRequest = typeof buildingRequests.$inferSelect;
+
+export type InsertTechRequest = z.infer<typeof insertTechRequestSchema>;
+export type TechRequest = typeof techRequests.$inferSelect;
+
+export type InsertOrganizationFeatures = z.infer<typeof insertOrganizationFeaturesSchema>;
+export type OrganizationFeatures = typeof organizationFeatures.$inferSelect;
 
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type Assignment = typeof assignments.$inferSelect;
