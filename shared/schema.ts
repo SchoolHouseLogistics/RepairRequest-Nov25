@@ -249,6 +249,13 @@ export const organizationFeatures = pgTable(
     techRequestsEnabled: boolean("tech_requests_enabled").default(false),
     buildingRequestsEnabled: boolean("building_requests_enabled").default(true),
     facilitiesRequestsEnabled: boolean("facilities_requests_enabled").default(true),
+    // SLA settings (in hours)
+    slaResponseHours: integer("sla_response_hours").default(24), // Target first response time
+    slaResolutionHours: integer("sla_resolution_hours").default(72), // Target resolution time
+    slaEscalationEnabled: boolean("sla_escalation_enabled").default(false),
+    slaEscalationEmail: varchar("sla_escalation_email"), // Email for escalation notifications
+    // Priority-specific SLA overrides (in hours, stored as JSON)
+    slaPriorityOverrides: jsonb("sla_priority_overrides"), // {urgent: {response: 4, resolution: 24}, high: {...}}
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },

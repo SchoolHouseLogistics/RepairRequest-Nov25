@@ -4,6 +4,8 @@ import { webhookService, WebhookEvent } from '../services/webhookService';
 import { exportService, ExportType, ExportFormat } from '../services/exportService';
 import { templateService } from '../services/templateService';
 import { auditService } from '../services/auditService';
+import { slaService } from '../services/slaService';
+import { analyticsService } from '../services/analyticsService';
 import { generateApiKey, API_PERMISSIONS } from '../middleware/apiKeyAuth';
 import { passwordResetLimiter, loginLimiter, requestCreateLimiter } from '../middleware/rateLimiter';
 import { sendSuccess, sendError, ValidationError, NotFoundError, ForbiddenError } from '../utils/errors';
@@ -672,6 +674,272 @@ router.get('/audit-logs', authMiddleware, async (req: any, res) => {
     );
   } catch (error) {
     console.error('Error fetching audit logs:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+// ============================================
+// SLA ROUTES
+// ============================================
+
+/**
+ * Get SLA configuration for the organization
+ */
+router.get('/sla/config', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+      return sendError(res, new ForbiddenError('Admin access required'));
+    }
+
+    const config = await slaService.getSLAConfig(user.organizationId);
+    return sendSuccess(res, config);
+  } catch (error) {
+    console.error('Error fetching SLA config:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Update SLA configuration
+ */
+router.put('/sla/config', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+      return sendError(res, new ForbiddenError('Admin access required'));
+    }
+
+    const { responseHours, resolutionHours, escalationEnabled, escalationEmail, priorityOverrides } = req.body;
+
+    await slaService.updateSLAConfig(user.organizationId, {
+      responseHours,
+      resolutionHours,
+      escalationEnabled,
+      escalationEmail,
+      priorityOverrides,
+    });
+
+    const config = await slaService.getSLAConfig(user.organizationId);
+    return sendSuccess(res, config, 200, undefined, 'SLA configuration updated');
+  } catch (error) {
+    console.error('Error updating SLA config:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get SLA metrics for the organization
+ */
+router.get('/sla/metrics', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN && user.role !== USER_ROLES.MAINTENANCE) {
+      return sendError(res, new ForbiddenError('Admin or maintenance access required'));
+    }
+
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+    const metrics = await slaService.getOrganizationMetrics(user.organizationId, startDate, endDate);
+    return sendSuccess(res, metrics);
+  } catch (error) {
+    console.error('Error fetching SLA metrics:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get overdue requests
+ */
+router.get('/sla/overdue', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN && user.role !== USER_ROLES.MAINTENANCE) {
+      return sendError(res, new ForbiddenError('Admin or maintenance access required'));
+    }
+
+    const overdueRequests = await slaService.getOverdueRequests(user.organizationId);
+    return sendSuccess(res, overdueRequests);
+  } catch (error) {
+    console.error('Error fetching overdue requests:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get SLA status for a specific request
+ */
+router.get('/sla/requests/:id', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+    const requestId = parseInt(req.params.id);
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    const slaStatus = await slaService.getRequestSLAStatus(requestId);
+
+    if (!slaStatus) {
+      return sendError(res, new NotFoundError('Request'));
+    }
+
+    return sendSuccess(res, slaStatus);
+  } catch (error) {
+    console.error('Error fetching request SLA status:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+// ============================================
+// ANALYTICS ROUTES
+// ============================================
+
+/**
+ * Get comprehensive dashboard analytics
+ */
+router.get('/analytics/dashboard', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+      return sendError(res, new ForbiddenError('Admin access required'));
+    }
+
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+    const analytics = await analyticsService.getDashboardAnalytics(user.organizationId, startDate, endDate);
+    return sendSuccess(res, analytics);
+  } catch (error) {
+    console.error('Error fetching dashboard analytics:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get request analytics
+ */
+router.get('/analytics/requests', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN && user.role !== USER_ROLES.MAINTENANCE) {
+      return sendError(res, new ForbiddenError('Admin or maintenance access required'));
+    }
+
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+    const analytics = await analyticsService.getRequestAnalytics(user.organizationId, startDate, endDate);
+    return sendSuccess(res, analytics);
+  } catch (error) {
+    console.error('Error fetching request analytics:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get user analytics
+ */
+router.get('/analytics/users', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+      return sendError(res, new ForbiddenError('Admin access required'));
+    }
+
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+    const analytics = await analyticsService.getUserAnalytics(user.organizationId, startDate, endDate);
+    return sendSuccess(res, analytics);
+  } catch (error) {
+    console.error('Error fetching user analytics:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get facility analytics
+ */
+router.get('/analytics/facilities', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+      return sendError(res, new ForbiddenError('Admin access required'));
+    }
+
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+    const analytics = await analyticsService.getFacilityAnalytics(user.organizationId, startDate, endDate);
+    return sendSuccess(res, analytics);
+  } catch (error) {
+    console.error('Error fetching facility analytics:', error);
+    return sendError(res, error as Error);
+  }
+});
+
+/**
+ * Get activity feed
+ */
+router.get('/analytics/activity', authMiddleware, async (req: any, res) => {
+  try {
+    const user = req.user as AuthenticatedUser;
+
+    if (!user.organizationId) {
+      return sendError(res, new ValidationError('Organization not assigned'));
+    }
+
+    if (user.role !== USER_ROLES.ADMIN && user.role !== USER_ROLES.SUPER_ADMIN) {
+      return sendError(res, new ForbiddenError('Admin access required'));
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const activities = await analyticsService.getActivityFeed(user.organizationId, Math.min(limit, 100));
+    return sendSuccess(res, activities);
+  } catch (error) {
+    console.error('Error fetching activity feed:', error);
     return sendError(res, error as Error);
   }
 });
