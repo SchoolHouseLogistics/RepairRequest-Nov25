@@ -450,7 +450,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizationId: user.organizationId ?? undefined,
       };
 
-      res.redirect("/dashboard");
+      // Save session before redirect
+      req.session!.save((err: any) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.redirect("/?error=session_failed");
+        }
+        res.redirect("/dashboard");
+      });
 
     } catch (error) {
       console.error("Google OAuth callback error:", error);
