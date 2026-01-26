@@ -16,6 +16,9 @@ import { cleanupRateLimitRecords } from "./middleware/rateLimiter";
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Trust proxy for Railway/Heroku/etc - needed for rate limiting and secure cookies
+app.set('trust proxy', 1);
+
 // Security: Add Helmet.js for security headers
 app.use(helmet({
   contentSecurityPolicy: {
