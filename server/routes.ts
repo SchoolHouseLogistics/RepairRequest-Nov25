@@ -385,6 +385,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const redirectUri = `${protocol}://${host}/api/auth/callback/google`;
 
       // Exchange authorization code for access token
+      console.log("OAuth callback - redirect URI:", redirectUri);
+
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
@@ -402,6 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tokenData = await tokenResponse.json();
 
       if (!tokenData.access_token) {
+        console.error("OAuth token exchange failed:", tokenData);
         return res.redirect("/?error=token_failed");
       }
 
@@ -450,6 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect("/dashboard");
 
     } catch (error) {
+      console.error("Google OAuth callback error:", error);
       return res.redirect("/?error=callback_failed");
     }
   });
