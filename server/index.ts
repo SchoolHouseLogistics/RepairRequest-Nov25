@@ -9,6 +9,9 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { db } from "./db.js";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import apiRoutes from "./routes/api";
+import { apiKeyAuthMiddleware } from "./middleware/apiKeyAuth";
+import { cleanupRateLimitRecords } from "./middleware/rateLimiter";
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -134,6 +137,24 @@ app.use(express.urlencoded({ extended: false }));
 
 // Register Object Storage routes for persistent file uploads
 registerObjectStorageRoutes(app);
+
+// API key authentication middleware (for programmatic API access)
+app.use('/api', apiKeyAuthMiddleware);
+
+// Register new modular API routes (webhooks, API keys, templates, exports, audit logs)
+app.use('/api', apiRoutes);
+
+// Cleanup old rate limit records periodically (every hour)
+setInterval(async () => {
+  try {
+    const cleaned = await cleanupRateLimitRecords();
+    if (cleaned > 0 && !isProduction) {
+      console.log(`Cleaned up ${cleaned} expired rate limit records`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up rate limit records:', error);
+  }
+}, 60 * 60 * 1000);
 
 // Production-aware logging middleware
 app.use((req, res, next) => {

@@ -3,6 +3,8 @@ import {
   requests,
   requestItems,
   buildingRequests,
+  techRequests,
+  organizationFeatures,
   assignments,
   messages,
   statusUpdates,
@@ -10,6 +12,7 @@ import {
   organizations,
   buildings,
   facilities,
+  passwordResetTokens,
   type User,
   type UpsertUser,
   type InsertRequest,
@@ -18,6 +21,10 @@ import {
   type RequestItems,
   type InsertBuildingRequest,
   type BuildingRequest,
+  type InsertTechRequest,
+  type TechRequest,
+  type InsertOrganizationFeatures,
+  type OrganizationFeatures,
   type InsertMessage,
   type Message,
   type InsertAssignment,
@@ -33,6 +40,7 @@ import {
   type Facility,
   type InsertFacility,
 } from "@shared/schema";
+import crypto from 'crypto';
 import { db } from "./db";
 import { eq, and, desc, count, sql, or, isNull, asc } from "drizzle-orm";
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -89,7 +97,6 @@ function saveFileLocally(key: string, fileBuffer: Buffer): string {
   const safeKey = key.replace(/\//g, '-');
   const localPath = path.join(uploadsDir, safeKey);
   fs.writeFileSync(localPath, fileBuffer);
-  console.log(`File saved locally to: ${localPath}`);
   return `/uploads/photos/${safeKey}`;
 }
 
@@ -97,13 +104,11 @@ function saveFileLocally(key: string, fileBuffer: Buffer): string {
 async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: string) {
   // Only use Replit Object Storage if we're actually in Replit
   if (isReplitEnvironment() && process.env.PRIVATE_OBJECT_DIR) {
-    console.log("Using Replit Object Storage for upload");
     return uploadToObjectStorage(key, fileBuffer, contentType);
   }
-  
+
   // Fall back to AWS S3 if configured
   if (S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
-    console.log("Using AWS S3 for upload");
     const params = {
       Bucket: S3_BUCKET,
       Key: key,
@@ -115,7 +120,6 @@ async function uploadFileToS3(key: string, fileBuffer: Buffer, contentType: stri
   }
   
   // Use local filesystem (works on Railway)
-  console.log("Using local filesystem for upload");
   return saveFileLocally(key, fileBuffer);
 }
 
@@ -129,19 +133,22 @@ export interface IStorage {
   updateOrganization(id: number, updates: Partial<InsertOrganization>): Promise<Organization>;
   getAllOrganizations(): Promise<any[]>;
   deleteOrganization(id: number): Promise<void>;
-  
+  softDeleteOrganization(id: number): Promise<void>;
+
   // Building operations
   createBuilding(buildingData: InsertBuilding): Promise<Building>;
   getBuildingsByOrganization(organizationId: number): Promise<Building[]>;
   updateBuilding(id: number, updates: Partial<InsertBuilding>): Promise<Building>;
   deleteBuilding(id: number): Promise<void>;
-  
+  softDeleteBuilding(id: number): Promise<void>;
+
   // Facility operations
   createFacility(facilityData: InsertFacility): Promise<Facility>;
   getFacilitiesByOrganization(organizationId: number): Promise<Facility[]>;
   updateFacility(id: number, updates: Partial<InsertFacility>): Promise<Facility>;
   deleteFacility(id: number): Promise<void>;
-  
+  softDeleteFacility(id: number): Promise<void>;
+
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -151,12 +158,20 @@ export interface IStorage {
   updateUserRole(userId: string, role: string): Promise<User>;
   updateUserOrganization(userId: string, organizationId: number): Promise<User>;
   deleteUser(userId: string): Promise<void>;
+  softDeleteUser(userId: string): Promise<void>;
   
   // Request operations
   createRequest(requestData: InsertRequest, requestItemsData?: InsertRequestItems): Promise<Request>;
   createBuildingRequest(buildingRequestData: InsertBuildingRequest): Promise<BuildingRequest>;
+  createTechRequest(techRequestData: InsertTechRequest): Promise<TechRequest>;
+  getTechRequestByRequestId(requestId: number): Promise<TechRequest | undefined>;
   getRequestById(id: number): Promise<Request | undefined>;
   getRequestDetails(id: number): Promise<any>;
+
+  // Organization features
+  getOrganizationFeatures(organizationId: number): Promise<OrganizationFeatures | undefined>;
+  upsertOrganizationFeatures(organizationId: number, features: Partial<InsertOrganizationFeatures>): Promise<OrganizationFeatures>;
+  isTechRequestsEnabled(organizationId: number): Promise<boolean>;
   
   // Photo uploads
   saveRequestPhoto(photoData: InsertRequestPhoto & { fileBuffer?: Buffer }): Promise<RequestPhoto>;
@@ -174,8 +189,8 @@ export interface IStorage {
   getAssignedRequests(userId: string): Promise<any[]>;
   
   // Room history
-  getAllBuildings(): Promise<string[]>;
-  getRequestsByBuilding(building: string, roomNumber?: string): Promise<any[]>;
+  getAllBuildings(organizationId?: number): Promise<string[]>;
+  getRequestsByBuilding(building: string, roomNumber?: string, organizationId?: number): Promise<any[]>;
   
   // Request timeline and messaging
   getRequestTimeline(requestId: number): Promise<any[]>;
@@ -191,14 +206,19 @@ export interface IStorage {
   // Access control
   canAccessRequest(userId: string, requestId: number): Promise<boolean>;
   isRequestor(userId: string, requestId: number): Promise<boolean>;
-  
+  softDeleteRequest(requestId: number): Promise<void>;
+
   // Reports
-  getReportsData(reportType: string): Promise<any>;
-  
+  getReportsData(reportType: string, organizationId?: number): Promise<any>;
+
   // Email notifications
   getOrganizationAdminEmails(organizationId: number): Promise<string[]>;
-  
 
+  // Password reset
+  createPasswordResetToken(userId: string): Promise<{ token: string; expiresAt: Date }>;
+  validatePasswordResetToken(token: string): Promise<{ valid: boolean; userId?: string }>;
+  usePasswordResetToken(token: string): Promise<boolean>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -209,17 +229,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOrganization(id: number): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    const [org] = await db.select().from(organizations).where(
+      and(eq(organizations.id, id), isNull(organizations.deletedAt))
+    );
     return org;
   }
 
   async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.slug, slug));
+    const [org] = await db.select().from(organizations).where(
+      and(eq(organizations.slug, slug), isNull(organizations.deletedAt))
+    );
     return org;
   }
 
   async getOrganizationByDomain(domain: string): Promise<Organization | undefined> {
-    const [org] = await db.select().from(organizations).where(eq(organizations.domain, domain));
+    const [org] = await db.select().from(organizations).where(
+      and(eq(organizations.domain, domain), isNull(organizations.deletedAt))
+    );
     return org;
   }
 
@@ -233,7 +259,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllOrganizations(): Promise<any[]> {
-    console.log("Storage: getAllOrganizations called");
     try {
       const orgList = await db
         .select({
@@ -245,10 +270,11 @@ export class DatabaseStorage implements IStorage {
           settings: organizations.settings,
           createdAt: organizations.createdAt,
           updatedAt: organizations.updatedAt,
-          userCount: sql<number>`(SELECT COUNT(*) FROM users WHERE users.organization_id = organizations.id)`,
-          buildingCount: sql<number>`(SELECT COUNT(*) FROM buildings WHERE buildings.organization_id = organizations.id)`,
+          userCount: sql<number>`(SELECT COUNT(*) FROM users WHERE users.organization_id = organizations.id AND users.deleted_at IS NULL)`,
+          buildingCount: sql<number>`(SELECT COUNT(*) FROM buildings WHERE buildings.organization_id = organizations.id AND buildings.deleted_at IS NULL)`,
         })
         .from(organizations)
+        .where(isNull(organizations.deletedAt))
         .orderBy(organizations.name);
       return orgList;
     } catch (error) {
@@ -258,7 +284,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteOrganization(id: number): Promise<void> {
+    // Hard delete - use softDeleteOrganization for soft deletes
     await db.delete(organizations).where(eq(organizations.id, id));
+  }
+
+  async softDeleteOrganization(id: number): Promise<void> {
+    await db.update(organizations)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(organizations.id, id));
   }
 
   // Building operations
@@ -268,20 +301,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBuildingsByOrganization(organizationId: number): Promise<Building[]> {
-    return db.select().from(buildings).where(eq(buildings.organizationId, organizationId));
+    return db.select().from(buildings).where(
+      and(eq(buildings.organizationId, organizationId), isNull(buildings.deletedAt))
+    );
   }
 
   async updateBuilding(id: number, updates: Partial<InsertBuilding>): Promise<Building> {
     const [building] = await db
       .update(buildings)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(buildings.id, id))
+      .where(and(eq(buildings.id, id), isNull(buildings.deletedAt)))
       .returning();
     return building;
   }
 
   async deleteBuilding(id: number): Promise<void> {
+    // Hard delete - use softDeleteBuilding for soft deletes
     await db.delete(buildings).where(eq(buildings.id, id));
+  }
+
+  async softDeleteBuilding(id: number): Promise<void> {
+    await db.update(buildings)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(buildings.id, id));
   }
   
   // Facility operations
@@ -291,56 +333,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFacilitiesByOrganization(organizationId: number): Promise<Facility[]> {
-    return db.select().from(facilities).where(eq(facilities.organizationId, organizationId));
+    return db.select().from(facilities).where(
+      and(eq(facilities.organizationId, organizationId), isNull(facilities.deletedAt))
+    );
   }
 
   async updateFacility(id: number, updates: Partial<InsertFacility>): Promise<Facility> {
     const [facility] = await db
       .update(facilities)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(facilities.id, id))
+      .where(and(eq(facilities.id, id), isNull(facilities.deletedAt)))
       .returning();
     return facility;
   }
 
   async deleteFacility(id: number): Promise<void> {
+    // Hard delete - use softDeleteFacility for soft deletes
     await db.delete(facilities).where(eq(facilities.id, id));
+  }
+
+  async softDeleteFacility(id: number): Promise<void> {
+    await db.update(facilities)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(facilities.id, id));
   }
   
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    console.log("=== STORAGE getUser DEBUG ===");
-    console.log("Requested ID:", id);
-    console.log("ID type:", typeof id);
-    console.log("ID length:", id?.length);
-    
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    console.log("Database query result:", user ? "Found user" : "No user found");
-    
-    if (user) {
-      console.log("Found user details:", {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      });
-    } else {
-      // Try to find by converting ID to string
-      console.log("Attempting alternative ID lookups...");
-      const allUsers = await db.select().from(users);
-      console.log("Total users in database:", allUsers.length);
-      
-      const matchingUser = allUsers.find(u => u.id.toString() === id.toString());
-      if (matchingUser) {
-        console.log("Found user via string conversion:", matchingUser.email);
-        return matchingUser;
-      }
-    }
-    
+    const [user] = await db.select().from(users).where(
+      and(eq(users.id, id), isNull(users.deletedAt))
+    );
     return user;
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(users).where(
+      and(eq(users.email, email), isNull(users.deletedAt))
+    );
     return user;
   }
 
@@ -369,10 +398,11 @@ export class DatabaseStorage implements IStorage {
         eq(users.role, 'maintenance'),
         eq(users.role, 'admin')
       ),
-      eq(users.organizationId, organizationId)
+      eq(users.organizationId, organizationId),
+      isNull(users.deletedAt)
     ));
   }
-  
+
   async getAllUsers(): Promise<any[]> {
     return db
       .select({
@@ -389,6 +419,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(users)
       .leftJoin(organizations, eq(users.organizationId, organizations.id))
+      .where(isNull(users.deletedAt))
       .orderBy(users.email);
   }
 
@@ -396,7 +427,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ role, updatedAt: new Date() })
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .returning();
     return user;
   }
@@ -405,13 +436,20 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ organizationId, updatedAt: new Date() })
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .returning();
     return user;
   }
 
   async deleteUser(userId: string): Promise<void> {
+    // Hard delete - use softDeleteUser for soft deletes
     await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async softDeleteUser(userId: string): Promise<void> {
+    await db.update(users)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
   
   // Request operations
@@ -441,38 +479,96 @@ export class DatabaseStorage implements IStorage {
   
   // Create building request separately
   async createBuildingRequest(buildingRequestData: InsertBuildingRequest): Promise<BuildingRequest> {
-    // Create the building request details
     const [buildingRequest] = await db
       .insert(buildingRequests)
       .values(buildingRequestData)
       .returning();
-      
+
     return buildingRequest;
   }
-  
+
+  // Create tech request
+  async createTechRequest(techRequestData: InsertTechRequest): Promise<TechRequest> {
+    const [techRequest] = await db
+      .insert(techRequests)
+      .values(techRequestData)
+      .returning();
+
+    return techRequest;
+  }
+
+  // Get tech request by request ID
+  async getTechRequestByRequestId(requestId: number): Promise<TechRequest | undefined> {
+    const [techRequest] = await db
+      .select()
+      .from(techRequests)
+      .where(eq(techRequests.requestId, requestId));
+    return techRequest;
+  }
+
+  // Organization features methods
+  async getOrganizationFeatures(organizationId: number): Promise<OrganizationFeatures | undefined> {
+    const [features] = await db
+      .select()
+      .from(organizationFeatures)
+      .where(eq(organizationFeatures.organizationId, organizationId));
+    return features;
+  }
+
+  async upsertOrganizationFeatures(
+    organizationId: number,
+    features: Partial<InsertOrganizationFeatures>
+  ): Promise<OrganizationFeatures> {
+    const [result] = await db
+      .insert(organizationFeatures)
+      .values({
+        organizationId,
+        ...features,
+      })
+      .onConflictDoUpdate({
+        target: organizationFeatures.organizationId,
+        set: {
+          ...features,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async isTechRequestsEnabled(organizationId: number): Promise<boolean> {
+    const features = await this.getOrganizationFeatures(organizationId);
+    return features?.techRequestsEnabled ?? false;
+  }
+
   async getRequestById(id: number): Promise<Request | undefined> {
-    const [request] = await db.select().from(requests).where(eq(requests.id, id));
+    const [request] = await db.select().from(requests).where(
+      and(eq(requests.id, id), isNull(requests.deletedAt))
+    );
     return request;
   }
   
   async getRequestDetails(id: number): Promise<any> {
-    // Get request with its items
-    const [request] = await db.select().from(requests).where(eq(requests.id, id));
-    
+    // Get request with its items (excluding soft-deleted)
+    const [request] = await db.select().from(requests).where(
+      and(eq(requests.id, id), isNull(requests.deletedAt))
+    );
+
     if (!request) {
       return null;
     }
     
     let items = null;
     let buildingDetails = null;
-    
+    let techDetails = null;
+
     // Get details based on request type
     if (request.requestType === 'facilities') {
-      // Get request items for facilities requests
       [items] = await db.select().from(requestItems).where(eq(requestItems.requestId, id));
     } else if (request.requestType === 'building') {
-      // Get building request details
       [buildingDetails] = await db.select().from(buildingRequests).where(eq(buildingRequests.requestId, id));
+    } else if (request.requestType === 'tech') {
+      [techDetails] = await db.select().from(techRequests).where(eq(techRequests.requestId, id));
     }
     
     // Get requestor info
@@ -494,6 +590,7 @@ export class DatabaseStorage implements IStorage {
       ...request,
       items,
       buildingDetails,
+      techDetails,
       requestor: requestor ? {
         id: requestor.id,
         name: `${requestor.firstName || ''} ${requestor.lastName || ''}`.trim(),
@@ -510,35 +607,40 @@ export class DatabaseStorage implements IStorage {
   
   // Dashboard stats
   async getUserDashboardStats(userId: string): Promise<any> {
+    const notDeleted = isNull(requests.deletedAt);
+
     const total = await db
       .select({ count: count() })
       .from(requests)
-      .where(eq(requests.requestorId, userId));
-    
+      .where(and(eq(requests.requestorId, userId), notDeleted));
+
     const pending = await db
       .select({ count: count() })
       .from(requests)
       .where(and(
         eq(requests.requestorId, userId),
-        eq(requests.status, 'pending')
+        eq(requests.status, 'pending'),
+        notDeleted
       ));
-    
+
     const inProgress = await db
       .select({ count: count() })
       .from(requests)
       .where(and(
         eq(requests.requestorId, userId),
-        eq(requests.status, 'in-progress')
+        eq(requests.status, 'in-progress'),
+        notDeleted
       ));
-    
+
     const completed = await db
       .select({ count: count() })
       .from(requests)
       .where(and(
         eq(requests.requestorId, userId),
-        eq(requests.status, 'completed')
+        eq(requests.status, 'completed'),
+        notDeleted
       ));
-    
+
     return {
       total: total[0].count,
       pending: pending[0].count,
@@ -550,25 +652,35 @@ export class DatabaseStorage implements IStorage {
   async getAdminDashboardStats(organizationId?: number): Promise<any> {
     // If organizationId is provided, filter by organization (for regular admins)
     // If not provided, show all data (for super admins)
-    const whereClause = organizationId ? eq(requests.organizationId, organizationId) : undefined;
-    
-    const total = await db.select({ count: count() }).from(requests).where(whereClause);
-    
+    // Always exclude soft-deleted requests
+    const notDeleted = isNull(requests.deletedAt);
+    const baseCondition = organizationId
+      ? and(eq(requests.organizationId, organizationId), notDeleted)
+      : notDeleted;
+
+    const total = await db.select({ count: count() }).from(requests).where(baseCondition);
+
     const pending = await db
       .select({ count: count() })
       .from(requests)
-      .where(organizationId ? and(eq(requests.status, 'pending'), eq(requests.organizationId, organizationId)) : eq(requests.status, 'pending'));
-    
+      .where(organizationId
+        ? and(eq(requests.status, 'pending'), eq(requests.organizationId, organizationId), notDeleted)
+        : and(eq(requests.status, 'pending'), notDeleted));
+
     const inProgress = await db
       .select({ count: count() })
       .from(requests)
-      .where(organizationId ? and(eq(requests.status, 'in-progress'), eq(requests.organizationId, organizationId)) : eq(requests.status, 'in-progress'));
-    
+      .where(organizationId
+        ? and(eq(requests.status, 'in-progress'), eq(requests.organizationId, organizationId), notDeleted)
+        : and(eq(requests.status, 'in-progress'), notDeleted));
+
     const completed = await db
       .select({ count: count() })
       .from(requests)
-      .where(organizationId ? and(eq(requests.status, 'completed'), eq(requests.organizationId, organizationId)) : eq(requests.status, 'completed'));
-    
+      .where(organizationId
+        ? and(eq(requests.status, 'completed'), eq(requests.organizationId, organizationId), notDeleted)
+        : and(eq(requests.status, 'completed'), notDeleted));
+
     return {
       total: total[0].count,
       pending: pending[0].count,
@@ -579,23 +691,23 @@ export class DatabaseStorage implements IStorage {
   
   // Request listings
   async getRecentRequests(limit: number, organizationId?: number): Promise<any[]> {
-    let query = db
+    // Build where condition: always exclude soft-deleted, optionally filter by org
+    const notDeleted = isNull(requests.deletedAt);
+    const whereCondition = organizationId
+      ? and(eq(requests.organizationId, organizationId), notDeleted)
+      : notDeleted;
+
+    const requestList = await db
       .select({
         request: requests,
         requestor: users
       })
       .from(requests)
       .leftJoin(users, eq(users.id, requests.requestorId))
+      .where(whereCondition)
       .orderBy(desc(requests.createdAt))
       .limit(limit);
 
-    // Filter by organization if provided (for regular admins)
-    if (organizationId) {
-      query = query.where(eq(requests.organizationId, organizationId)) as any;
-    }
-    
-    const requestList = await query;
-    
     return requestList.map(item => ({
       ...item.request,
       requestor: item.requestor ? {
@@ -610,59 +722,54 @@ export class DatabaseStorage implements IStorage {
     const requestList = await db
       .select()
       .from(requests)
-      .where(eq(requests.requestorId, userId))
+      .where(and(eq(requests.requestorId, userId), isNull(requests.deletedAt)))
       .orderBy(desc(requests.createdAt))
       .limit(limit);
-    
+
     return requestList;
   }
   
   async getUserRequestsByStatus(userId: string, status?: string): Promise<any[]> {
     try {
-      // First, get basic request data
-      let queryBuilder = db
+      // Use a single query with LEFT JOINs to avoid N+1 queries
+      // Join requests -> assignments -> assignee (users)
+      const conditions = [eq(requests.requestorId, userId), isNull(requests.deletedAt)];
+      if (status) {
+        conditions.push(eq(requests.status, status));
+      }
+
+      const results = await db
         .select({
-          request: requests
+          request: requests,
+          assigneeId: assignments.assigneeId,
+          assigneeFirstName: sql<string>`assignee.first_name`,
+          assigneeLastName: sql<string>`assignee.last_name`,
+          assigneeProfileImage: sql<string>`assignee.profile_image_url`,
         })
         .from(requests)
-        .where(eq(requests.requestorId, userId));
-      
-      if (status) {
-        queryBuilder = queryBuilder.where(eq(requests.status, status));
-      }
-      
-      const results = await queryBuilder.orderBy(desc(requests.updatedAt));
-      
-      // For each request, get assignment data separately if needed
-      const requestsWithAssignees = await Promise.all(
-        results.map(async (item) => {
-          // Get assignment info if it exists
-          const assignmentData = await db
-            .select({
-              assignment: assignments,
-              assignee: users
-            })
-            .from(assignments)
-            .leftJoin(users, eq(users.id, assignments.assigneeId))
-            .where(eq(assignments.requestId, item.request.id))
-            .limit(1);
-            
-          const assigneeData = assignmentData.length > 0 && assignmentData[0].assignee 
-            ? {
-                id: assignmentData[0].assignee.id,
-                name: `${assignmentData[0].assignee.firstName || ''} ${assignmentData[0].assignee.lastName || ''}`.trim(),
-                profileImageUrl: assignmentData[0].assignee.profileImageUrl
-              } 
-            : null;
-            
-          return {
-            ...item.request,
-            assignee: assigneeData
-          };
-        })
-      );
-      
-      return requestsWithAssignees;
+        .leftJoin(assignments, eq(assignments.requestId, requests.id))
+        .leftJoin(
+          sql`users as assignee`,
+          sql`assignee.id = ${assignments.assigneeId}`
+        )
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+        .orderBy(desc(requests.updatedAt));
+
+      // Format the results
+      return results.map((item) => {
+        const assigneeData = item.assigneeId
+          ? {
+              id: item.assigneeId,
+              name: `${item.assigneeFirstName || ''} ${item.assigneeLastName || ''}`.trim(),
+              profileImageUrl: item.assigneeProfileImage
+            }
+          : null;
+
+        return {
+          ...item.request,
+          assignee: assigneeData
+        };
+      });
     } catch (error) {
       console.error("Error fetching user requests by status:", error);
       return [];
@@ -671,69 +778,67 @@ export class DatabaseStorage implements IStorage {
   
   async getAllRequestsByStatus(status?: string, organizationId?: number): Promise<any[]> {
     try {
-      // First get the basic request data with requestors
-      let queryBuilder = db
-        .select({
-          request: requests,
-          requestor: users
-        })
-        .from(requests)
-        .leftJoin(users, eq(users.id, requests.requestorId));
-      
-      // Build where conditions
-      const conditions = [];
+      // Use a single query with LEFT JOINs to avoid N+1 queries
+      // Join requests -> requestor (users) -> assignments -> assignee (users)
+      // Always exclude soft-deleted requests
+      const conditions = [isNull(requests.deletedAt)];
       if (status) {
         conditions.push(eq(requests.status, status));
       }
       if (organizationId) {
         conditions.push(eq(requests.organizationId, organizationId));
       }
-      
-      if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
-      }
-      
-      const results = await queryBuilder.orderBy(desc(requests.updatedAt));
-      
-      // For each request, get assignment data separately
-      const enrichedRequests = await Promise.all(
-        results.map(async (item) => {
-          // Get assignment info if it exists
-          const assignmentData = await db
-            .select({
-              assignment: assignments,
-              assignee: users
-            })
-            .from(assignments)
-            .leftJoin(users, eq(users.id, assignments.assigneeId))
-            .where(eq(assignments.requestId, item.request.id))
-            .limit(1);
-            
-          // Format the requestor info
-          const requestorInfo = item.requestor ? {
-            id: item.requestor.id,
-            name: `${item.requestor.firstName || ''} ${item.requestor.lastName || ''}`.trim(),
-            email: item.requestor.email
-          } : null;
-          
-          // Format the assignee info if available
-          const assigneeInfo = assignmentData.length > 0 && assignmentData[0].assignee 
-            ? {
-                id: assignmentData[0].assignee.id,
-                name: `${assignmentData[0].assignee.firstName || ''} ${assignmentData[0].assignee.lastName || ''}`.trim(),
-                profileImageUrl: assignmentData[0].assignee.profileImageUrl
-              } 
-            : null;
-            
-          return {
-            ...item.request,
-            requestor: requestorInfo,
-            assignee: assigneeInfo
-          };
+
+      let query = db
+        .select({
+          request: requests,
+          requestorId: users.id,
+          requestorFirstName: users.firstName,
+          requestorLastName: users.lastName,
+          requestorEmail: users.email,
+          assigneeId: assignments.assigneeId,
+          assigneeFirstName: sql<string>`assignee.first_name`,
+          assigneeLastName: sql<string>`assignee.last_name`,
+          assigneeProfileImage: sql<string>`assignee.profile_image_url`,
         })
-      );
-      
-      return enrichedRequests;
+        .from(requests)
+        .leftJoin(users, eq(users.id, requests.requestorId))
+        .leftJoin(assignments, eq(assignments.requestId, requests.id))
+        .leftJoin(
+          sql`users as assignee`,
+          sql`assignee.id = ${assignments.assigneeId}`
+        );
+
+      if (conditions.length > 0) {
+        query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions)) as any;
+      }
+
+      const results = await query.orderBy(desc(requests.updatedAt));
+
+      // Format the results
+      return results.map((item) => {
+        const requestorInfo = item.requestorId
+          ? {
+              id: item.requestorId,
+              name: `${item.requestorFirstName || ''} ${item.requestorLastName || ''}`.trim(),
+              email: item.requestorEmail
+            }
+          : null;
+
+        const assigneeInfo = item.assigneeId
+          ? {
+              id: item.assigneeId,
+              name: `${item.assigneeFirstName || ''} ${item.assigneeLastName || ''}`.trim(),
+              profileImageUrl: item.assigneeProfileImage
+            }
+          : null;
+
+        return {
+          ...item.request,
+          requestor: requestorInfo,
+          assignee: assigneeInfo
+        };
+      });
     } catch (error) {
       console.error("Error fetching all requests by status:", error);
       return [];
@@ -742,64 +847,46 @@ export class DatabaseStorage implements IStorage {
   
   async getAssignedRequests(userId: string): Promise<any[]> {
     try {
-      // First verify the user exists
-      const assigneeResult = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      
-      if (!assigneeResult.length) {
-        console.error(`User with ID ${userId} not found`);
-        return [];
-      }
-      
-      // Get all assignments for this user first
-      const assignmentResults = await db
-        .select()
-        .from(assignments)
-        .where(eq(assignments.assigneeId, userId));
-      
-      if (!assignmentResults.length) {
-        return []; // No assignments found
-      }
-      
-      // Get details for each assigned request
-      const assignedRequests = await Promise.all(
-        assignmentResults.map(async (assignment) => {
-          // Get the request details
-          const [requestData] = await db
-            .select({
-              request: requests,
-              requestor: users
-            })
-            .from(requests)
-            .leftJoin(users, eq(users.id, requests.requestorId))
-            .where(eq(requests.id, assignment.requestId));
-          
-          if (!requestData) {
-            return null; // Skip if request not found
-          }
-          
-          // Format the response
-          return {
-            ...requestData.request,
-            requestor: requestData.requestor ? {
-              id: requestData.requestor.id,
-              name: `${requestData.requestor.firstName || ''} ${requestData.requestor.lastName || ''}`.trim(),
-              email: requestData.requestor.email
-            } : null,
-            assignment: assignment
-          };
+      // Use a single query with JOINs to avoid N+1 queries
+      // Join assignments -> requests -> requestor (users)
+      // Exclude soft-deleted requests
+      const results = await db
+        .select({
+          request: requests,
+          requestorId: users.id,
+          requestorFirstName: users.firstName,
+          requestorLastName: users.lastName,
+          requestorEmail: users.email,
+          assignmentId: assignments.id,
+          assignedAt: assignments.assignedAt,
+          internalNotes: assignments.internalNotes,
         })
-      );
-      
-      // Remove any null entries and sort by updatedAt
-      return assignedRequests
-        .filter(request => request !== null)
-        .sort((a, b) => 
-          new Date(b!.updatedAt).getTime() - new Date(a!.updatedAt).getTime()
-        );
+        .from(assignments)
+        .innerJoin(requests, and(eq(requests.id, assignments.requestId), isNull(requests.deletedAt)))
+        .leftJoin(users, eq(users.id, requests.requestorId))
+        .where(eq(assignments.assigneeId, userId))
+        .orderBy(desc(requests.updatedAt));
+
+      // Format the results
+      return results.map((item) => {
+        const requestorInfo = item.requestorId
+          ? {
+              id: item.requestorId,
+              name: `${item.requestorFirstName || ''} ${item.requestorLastName || ''}`.trim(),
+              email: item.requestorEmail
+            }
+          : null;
+
+        return {
+          ...item.request,
+          requestor: requestorInfo,
+          assignment: {
+            id: item.assignmentId,
+            assignedAt: item.assignedAt,
+            internalNotes: item.internalNotes,
+          }
+        };
+      });
     } catch (error) {
       console.error("Error fetching assigned requests:", error);
       return [];
@@ -927,21 +1014,51 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateRequestStatus(statusUpdateData: InsertStatusUpdate): Promise<StatusUpdate> {
+    // Valid status values
+    const VALID_STATUSES = ['pending', 'approved', 'in-progress', 'completed', 'cancelled'];
+
+    // Valid status transitions state machine
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      'pending': ['approved', 'in-progress', 'cancelled'],
+      'approved': ['in-progress', 'completed', 'cancelled'],
+      'in-progress': ['completed', 'cancelled'],
+      'completed': ['pending'],  // Allow reopen
+      'cancelled': ['pending'],  // Allow reopen
+    };
+
+    // Validate the new status is a valid value
+    if (!VALID_STATUSES.includes(statusUpdateData.status)) {
+      throw new Error(`Invalid status value: ${statusUpdateData.status}. Must be one of: ${VALID_STATUSES.join(', ')}`);
+    }
+
+    // Get current request status
+    const [currentRequest] = await db.select().from(requests).where(eq(requests.id, statusUpdateData.requestId));
+
+    if (!currentRequest) {
+      throw new Error(`Request not found: ${statusUpdateData.requestId}`);
+    }
+
+    // Validate the status transition is allowed
+    const allowedTransitions = VALID_TRANSITIONS[currentRequest.status] || [];
+    if (!allowedTransitions.includes(statusUpdateData.status) && currentRequest.status !== statusUpdateData.status) {
+      throw new Error(`Invalid status transition: ${currentRequest.status} → ${statusUpdateData.status}. Allowed transitions from ${currentRequest.status}: ${allowedTransitions.join(', ')}`);
+    }
+
     // Create status update record
     const [statusUpdate] = await db
       .insert(statusUpdates)
       .values(statusUpdateData)
       .returning();
-    
+
     // Update request status
     await db
       .update(requests)
-      .set({ 
+      .set({
         status: statusUpdateData.status,
         updatedAt: new Date()
       })
       .where(eq(requests.id, statusUpdateData.requestId));
-    
+
     return statusUpdate;
   }
 
@@ -978,26 +1095,34 @@ export class DatabaseStorage implements IStorage {
   async canAccessRequest(userId: string, requestId: number): Promise<boolean> {
     // Get user
     const [user] = await db.select().from(users).where(eq(users.id, userId));
-    
+
     if (!user) {
       return false;
     }
-    
-    // Admin/maintenance can access all requests
-    if (user.role === 'admin' || user.role === 'maintenance') {
+
+    // Get the request to check organization
+    const [request] = await db.select().from(requests).where(eq(requests.id, requestId));
+
+    if (!request) {
+      return false;
+    }
+
+    // Super admin can access all requests
+    if (user.role === 'super_admin') {
       return true;
     }
-    
-    // Check if user is the requestor
-    const [request] = await db
-      .select()
-      .from(requests)
-      .where(and(
-        eq(requests.id, requestId),
-        eq(requests.requestorId, userId)
-      ));
-    
-    // Check if user is assigned to this request
+
+    // Admin/maintenance can access requests within their organization only
+    if (user.role === 'admin' || user.role === 'maintenance') {
+      return request.organizationId === user.organizationId;
+    }
+
+    // Regular users: Check if user is the requestor (and in same org)
+    if (request.requestorId === userId && request.organizationId === user.organizationId) {
+      return true;
+    }
+
+    // Check if user is assigned to this request (and in same org)
     const [assignment] = await db
       .select()
       .from(assignments)
@@ -1005,8 +1130,8 @@ export class DatabaseStorage implements IStorage {
         eq(assignments.requestId, requestId),
         eq(assignments.assigneeId, userId)
       ));
-    
-    return !!request || !!assignment;
+
+    return !!assignment && request.organizationId === user.organizationId;
   }
   
   async isRequestor(userId: string, requestId: number): Promise<boolean> {
@@ -1017,14 +1142,19 @@ export class DatabaseStorage implements IStorage {
         eq(requests.id, requestId),
         eq(requests.requestorId, userId)
       ));
-    
+
     return !!request;
   }
-  
+
+  async softDeleteRequest(requestId: number): Promise<void> {
+    await db.update(requests)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(requests.id, requestId));
+  }
+
   // Photo uploads
   async saveRequestPhoto(photoData: InsertRequestPhoto & { fileBuffer?: Buffer }): Promise<RequestPhoto> {
     try {
-      console.log("Saving photo with data:", photoData);
       let photoUrl = photoData.photoUrl || `uploads/photos/${photoData.filename}`;
       let filePath = photoData.filePath;
       // If fileBuffer is provided, upload to S3
@@ -1072,15 +1202,28 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Room history
-  async getAllBuildings(): Promise<string[]> {
+  async getAllBuildings(organizationId?: number): Promise<string[]> {
     try {
-      const result = await db.execute(sql`
-        SELECT DISTINCT building 
-        FROM building_requests 
-        WHERE building IS NOT NULL AND building != ''
-        ORDER BY building
-      `);
-      
+      let result;
+      if (organizationId) {
+        // Filter by organization
+        result = await db.execute(sql`
+          SELECT DISTINCT b.building
+          FROM building_requests b
+          JOIN requests r ON b.request_id = r.id
+          WHERE b.building IS NOT NULL AND b.building != '' AND r.organization_id = ${organizationId}
+          ORDER BY b.building
+        `);
+      } else {
+        // Super admin - get all buildings
+        result = await db.execute(sql`
+          SELECT DISTINCT building
+          FROM building_requests
+          WHERE building IS NOT NULL AND building != ''
+          ORDER BY building
+        `);
+      }
+
       // Extract the building names from the result
       return result.rows.map((row: any) => row.building);
     } catch (error) {
@@ -1089,15 +1232,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getRequestsByBuilding(building: string, roomNumber?: string): Promise<any[]> {
+  async getRequestsByBuilding(building: string, roomNumber?: string, organizationId?: number): Promise<any[]> {
     try {
       let query;
-      
-      if (roomNumber) {
-        // Filter by both building and room number
+
+      if (roomNumber && organizationId) {
+        // Filter by building, room number, and organization
         query = sql`
           SELECT r.*, b.building, b.room_number, b.description as building_description,
-                 u.id as requestor_id, u.first_name as requestor_first_name, 
+                 u.id as requestor_id, u.first_name as requestor_first_name,
+                 u.last_name as requestor_last_name, u.profile_image_url as requestor_image
+          FROM requests r
+          JOIN building_requests b ON r.id = b.request_id
+          LEFT JOIN users u ON r.requestor_id = u.id
+          WHERE b.building = ${building} AND b.room_number = ${roomNumber} AND r.organization_id = ${organizationId}
+          ORDER BY r.created_at DESC
+        `;
+      } else if (roomNumber) {
+        // Filter by building and room number only (super admin)
+        query = sql`
+          SELECT r.*, b.building, b.room_number, b.description as building_description,
+                 u.id as requestor_id, u.first_name as requestor_first_name,
                  u.last_name as requestor_last_name, u.profile_image_url as requestor_image
           FROM requests r
           JOIN building_requests b ON r.id = b.request_id
@@ -1105,11 +1260,23 @@ export class DatabaseStorage implements IStorage {
           WHERE b.building = ${building} AND b.room_number = ${roomNumber}
           ORDER BY r.created_at DESC
         `;
-      } else {
-        // Filter by building only
+      } else if (organizationId) {
+        // Filter by building and organization
         query = sql`
           SELECT r.*, b.building, b.room_number, b.description as building_description,
-                 u.id as requestor_id, u.first_name as requestor_first_name, 
+                 u.id as requestor_id, u.first_name as requestor_first_name,
+                 u.last_name as requestor_last_name, u.profile_image_url as requestor_image
+          FROM requests r
+          JOIN building_requests b ON r.id = b.request_id
+          LEFT JOIN users u ON r.requestor_id = u.id
+          WHERE b.building = ${building} AND r.organization_id = ${organizationId}
+          ORDER BY r.created_at DESC
+        `;
+      } else {
+        // Filter by building only (super admin)
+        query = sql`
+          SELECT r.*, b.building, b.room_number, b.description as building_description,
+                 u.id as requestor_id, u.first_name as requestor_first_name,
                  u.last_name as requestor_last_name, u.profile_image_url as requestor_image
           FROM requests r
           JOIN building_requests b ON r.id = b.request_id
@@ -1118,9 +1285,9 @@ export class DatabaseStorage implements IStorage {
           ORDER BY r.created_at DESC
         `;
       }
-      
+
       const result = await db.execute(query);
-      
+
       // Format the results
       return result.rows.map((row: any) => {
         return {
@@ -1132,6 +1299,7 @@ export class DatabaseStorage implements IStorage {
           createdAt: row.created_at,
           updatedAt: row.updated_at,
           eventDate: row.event_date,
+          organizationId: row.organization_id,
           buildingDetails: {
             building: row.building,
             roomNumber: row.room_number,
@@ -1151,12 +1319,18 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Reports
-  async getReportsData(reportType: string): Promise<any> {
+  async getReportsData(reportType: string, organizationId?: number): Promise<any> {
+    // Build organization filter condition
+    const orgFilter = organizationId ? eq(requests.organizationId, organizationId) : undefined;
+
     if (reportType === 'monthly') {
       // Get counts by month for the past 6 months
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      
+
+      const dateFilter = sql`requests.created_at >= ${sixMonthsAgo.toISOString()}`;
+      const whereClause = orgFilter ? and(dateFilter, orgFilter) : dateFilter;
+
       const results = await db
         .select({
           month: sql`to_char(requests.created_at, 'YYYY-MM')`,
@@ -1164,45 +1338,59 @@ export class DatabaseStorage implements IStorage {
           status: requests.status
         })
         .from(requests)
-        .where(sql`requests.created_at >= ${sixMonthsAgo.toISOString()}`)
+        .where(whereClause)
         .groupBy(sql`to_char(requests.created_at, 'YYYY-MM')`, requests.status)
         .orderBy(sql`to_char(requests.created_at, 'YYYY-MM')`);
-      
+
       return {
         type: 'monthly',
         data: results
       };
     } else if (reportType === 'facility') {
       // Get counts by facility
-      const results = await db
+      let query = db
         .select({
           facility: requests.facility,
           count: count()
         })
-        .from(requests)
+        .from(requests);
+
+      if (orgFilter) {
+        query = query.where(orgFilter) as any;
+      }
+
+      const results = await query
         .groupBy(requests.facility)
         .orderBy(desc(count()));
-      
+
       return {
         type: 'facility',
         data: results
       };
     } else if (reportType === 'status') {
       // Get current counts by status
-      const results = await db
+      let query = db
         .select({
           status: requests.status,
           count: count()
         })
-        .from(requests)
-        .groupBy(requests.status);
-      
+        .from(requests);
+
+      if (orgFilter) {
+        query = query.where(orgFilter) as any;
+      }
+
+      const results = await query.groupBy(requests.status);
+
       return {
         type: 'status',
         data: results
       };
     } else {
       // Default to completion time report
+      const completedFilter = eq(requests.status, 'completed');
+      const whereClause = orgFilter ? and(completedFilter, orgFilter) : completedFilter;
+
       const results = await db
         .select({
           request: requests,
@@ -1224,8 +1412,8 @@ export class DatabaseStorage implements IStorage {
             eq(sql`completed_status.status`, 'completed')
           )
         )
-        .where(eq(requests.status, 'completed'));
-      
+        .where(whereClause);
+
       return {
         type: 'completion',
         data: results.map(item => ({
@@ -1234,8 +1422,8 @@ export class DatabaseStorage implements IStorage {
           event: item.request.event,
           created: item.created,
           completed: item.completed,
-          timeToComplete: item.completed && item.created 
-            ? Math.round((new Date(item.completed).getTime() - new Date(item.created).getTime()) / (1000 * 60 * 60 * 24)) 
+          timeToComplete: item.completed && item.created
+            ? Math.round((new Date(item.completed).getTime() - new Date(item.created).getTime()) / (1000 * 60 * 60 * 24))
             : null
         }))
       };
@@ -1244,8 +1432,6 @@ export class DatabaseStorage implements IStorage {
 
   async getOrganizationAdminEmails(organizationId: number): Promise<string[]> {
     try {
-      console.log("Getting admin emails for organization:", organizationId);
-      
       const adminUsers = await db
         .select({ email: users.email })
         .from(users)
@@ -1258,15 +1444,85 @@ export class DatabaseStorage implements IStorage {
             )
           )
         );
-      
-      const emails = adminUsers.map(user => user.email).filter(email => email !== null);
-      console.log("Found admin emails:", emails);
-      
-      return emails;
+
+      return adminUsers.map(user => user.email).filter(email => email !== null);
     } catch (error) {
       console.error("Error getting organization admin emails:", error);
       return [];
     }
+  }
+
+  // Password reset functions
+  async createPasswordResetToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
+    // Generate a secure random token
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // Token expires in 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Delete any existing tokens for this user
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+
+    // Insert the new token
+    await db.insert(passwordResetTokens).values({
+      userId,
+      token,
+      expiresAt,
+    });
+
+    return { token, expiresAt };
+  }
+
+  async validatePasswordResetToken(token: string): Promise<{ valid: boolean; userId?: string }> {
+    const [result] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          isNull(passwordResetTokens.usedAt)
+        )
+      )
+      .limit(1);
+
+    if (!result) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (new Date() > result.expiresAt) {
+      return { valid: false };
+    }
+
+    return { valid: true, userId: result.userId };
+  }
+
+  async usePasswordResetToken(token: string): Promise<boolean> {
+    const result = await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          isNull(passwordResetTokens.usedAt)
+        )
+      )
+      .returning();
+
+    return result.length > 0;
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return result.length > 0;
   }
 }
 
