@@ -12,6 +12,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import apiRoutes from "./routes/api";
 import { apiKeyAuthMiddleware } from "./middleware/apiKeyAuth";
 import { cleanupRateLimitRecords } from "./middleware/rateLimiter";
+import { setRLSContext } from "./middleware/rlsContext";
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -162,6 +163,10 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Set RLS (Row Level Security) context for database queries
+// This must come after session middleware so req.user is available
+app.use('/api', setRLSContext);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
