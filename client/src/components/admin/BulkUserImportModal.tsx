@@ -47,28 +47,31 @@ export default function BulkUserImportModal() {
   const { toast } = useToast();
 
   const bulkMutation = useMutation({
-    mutationFn: (payload: ServerPayload[]) => {
-      console.log("=== FRONTEND BULK IMPORT DEBUG ===");
-      console.log("Payload being sent:", payload);
-      console.log("Payload type:", typeof payload);
-      console.log("Payload length:", payload.length);
-      
-      return fetch(`/api/admin/users/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ users: payload }),
-      }).then(async (r) => {
-        console.log("Response status:", r.status);
-        console.log("Response ok:", r.ok);
-        if (!r.ok) {
-          const errorText = await r.text();
-          console.error("Error response:", errorText);
+    mutationFn: async (payload: ServerPayload[]) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for bulk operations
+
+      try {
+        const response = await fetch("/api/admin/users/bulk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ users: payload }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
           throw new Error(errorText);
         }
-        const responseData = await r.json();
-        console.log("Success response:", responseData);
-        return responseData;
-      });
+        return await response.json();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Request timed out. Please try with fewer users.');
+        }
+        throw error;
+      }
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -183,29 +186,23 @@ export default function BulkUserImportModal() {
     step === "preview"
       ? rows.map((r, index) => {
           try {
-            console.log(`Processing row ${index + 1}:`, r);
-            const obj: any = {};
+            const obj: Record<string, string> = {};
             rawColumns.forEach((col, idx) => {
               const mapped = columnMap[col];
               if (mapped) obj[mapped] = r[idx];
             });
-            console.log(`Mapped object for row ${index + 1}:`, obj);
-            
+
             // enforce schema, convert orgId to number/null
             const parsed = csvSchema.safeParse({ ...obj, organizationId: obj.organizationId || undefined });
             if (!parsed.success) {
-              console.error(`Validation failed for row ${index + 1}:`, parsed.error);
               throw new Error(`Row ${index + 1}: ${parsed.error.message}`);
             }
-            
-            const result = { 
-              ...parsed.data, 
-              organizationId: parsed.data.organizationId ? Number(parsed.data.organizationId) : null 
+
+            return {
+              ...parsed.data,
+              organizationId: parsed.data.organizationId ? Number(parsed.data.organizationId) : null
             };
-            console.log(`Final result for row ${index + 1}:`, result);
-            return result;
           } catch (error) {
-            console.error(`Error processing row ${index + 1}:`, error);
             throw new Error(`Row ${index + 1}: ${error instanceof Error ? error.message : 'Invalid data'}`);
           }
         })
@@ -408,13 +405,7 @@ export default function BulkUserImportModal() {
                 Back
               </Button>
               <Button
-                onClick={() => {
-                  console.log("=== PREVIEW STEP DEBUG ===");
-                  console.log("About to import mappedRows:", mappedRows);
-                  console.log("mappedRows length:", mappedRows.length);
-                  console.log("mappedRows type:", typeof mappedRows);
-                  bulkMutation.mutate(mappedRows);
-                }}
+                onClick={() => bulkMutation.mutate(mappedRows)}
                 className="w-full sm:w-auto"
                 disabled={bulkMutation.isPending}
               >

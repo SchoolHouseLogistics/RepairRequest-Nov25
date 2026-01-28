@@ -114,13 +114,24 @@ export default function Navbar({ toggleMobileSidebar, user }: NavbarProps) {
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={async (e) => {
                       e.preventDefault();
-                      await fetch("/api/logout", { credentials: "include" });
-                      // Clear React Query cache
-                      queryClient.clear();
-                      window.location.href = "/";
+                      try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000);
+                        await fetch("/api/logout", {
+                          credentials: "include",
+                          signal: controller.signal
+                        });
+                        clearTimeout(timeoutId);
+                      } catch (error) {
+                        console.error('Logout error:', error);
+                      } finally {
+                        // Clear React Query cache and redirect regardless
+                        queryClient.clear();
+                        window.location.href = "/";
+                      }
                     }}
                   >
                     <span className="material-icons text-sm mr-2">logout</span>
