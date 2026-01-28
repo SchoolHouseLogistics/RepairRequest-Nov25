@@ -122,17 +122,28 @@ export default function Sidebar({ isMobileOpen, closeMobileSidebar, user }: Side
         </div>
         
         <div className="border-t border-gray-200 p-4">
-          <div 
+          <div
             className="flex items-center text-gray-600 hover:text-primary cursor-pointer select-none"
             onClick={async (e) => {
               e.preventDefault();
               if (isMobileOpen) {
                 closeMobileSidebar();
               }
-              await fetch(`/api/logout`, { credentials: "include" });
-              // Clear React Query cache
-              queryClient.clear();
-              window.location.href = "/";
+              try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                await fetch("/api/logout", {
+                  credentials: "include",
+                  signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+              } catch (error) {
+                console.error('Logout error:', error);
+              } finally {
+                // Clear React Query cache and redirect regardless
+                queryClient.clear();
+                window.location.href = "/";
+              }
             }}
             onTouchStart={(e) => {
               e.currentTarget.style.backgroundColor = '#f3f4f6';
