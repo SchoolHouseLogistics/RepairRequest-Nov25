@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../db';
 import { rateLimitRecords } from '@shared/schema';
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { RATE_LIMITS, ERROR_CODES } from '../constants';
+import { getRedisClient, isRedisAvailable, CacheKeys } from '../redis';
 
 export interface RateLimitConfig {
   maxRequests: number;
@@ -13,7 +14,119 @@ export interface RateLimitConfig {
 }
 
 /**
+ * Redis-based rate limiter (preferred)
+ *
+ * Uses Redis sliding window algorithm for accurate rate limiting
+ * with minimal memory footprint and no database writes.
+ */
+async function checkRateLimitRedis(
+  key: string,
+  maxRequests: number,
+  windowMs: number
+): Promise<{ allowed: boolean; remaining: number; reset: Date }> {
+  const redis = getRedisClient();
+  if (!redis || !isRedisAvailable()) {
+    // Redis unavailable, allow request (fail open)
+    return { allowed: true, remaining: maxRequests, reset: new Date() };
+  }
+
+  const now = Date.now();
+  const windowStart = now - windowMs;
+  const redisKey = CacheKeys.rateLimit(key);
+
+  try {
+    // Sliding window algorithm using sorted sets
+    const multi = redis.multi();
+
+    // Remove old entries outside the window
+    multi.zremrangebyscore(redisKey, 0, windowStart);
+
+    // Count current entries in the window
+    multi.zcard(redisKey);
+
+    // Add current request with timestamp as score and member
+    const requestId = `${now}:${Math.random()}`;
+    multi.zadd(redisKey, now, requestId);
+
+    // Set expiry on the key (cleanup)
+    multi.expire(redisKey, Math.ceil(windowMs / 1000) + 60);
+
+    const results = await multi.exec();
+
+    // results[1] is the count before adding the current request
+    const currentCount = results?.[1]?.[1] as number || 0;
+    const remaining = Math.max(0, maxRequests - currentCount - 1);
+    const reset = new Date(now + windowMs);
+
+    return {
+      allowed: currentCount < maxRequests,
+      remaining,
+      reset,
+    };
+  } catch (error) {
+    console.error('Redis rate limit error:', error);
+    // Fail open - allow the request if Redis has issues
+    return { allowed: true, remaining: maxRequests, reset: new Date() };
+  }
+}
+
+/**
+ * Database-based rate limiter (fallback)
+ *
+ * Less efficient but works when Redis is unavailable.
+ * Writes to database on every request.
+ */
+async function checkRateLimitDatabase(
+  key: string,
+  endpoint: string,
+  maxRequests: number,
+  windowMs: number
+): Promise<{ allowed: boolean; remaining: number; reset: Date }> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - windowMs);
+
+  try {
+    // Get current request count in the window
+    const [record] = await db
+      .select({
+        count: sql<number>`COALESCE(SUM(${rateLimitRecords.requestCount}), 0)`,
+      })
+      .from(rateLimitRecords)
+      .where(
+        sql`${rateLimitRecords.key} = ${key}
+            AND ${rateLimitRecords.endpoint} = ${endpoint}
+            AND ${rateLimitRecords.windowStart} >= ${windowStart}`
+      );
+
+    const currentCount = Number(record?.count || 0);
+    const remaining = Math.max(0, maxRequests - currentCount - 1);
+    const reset = new Date(now.getTime() + windowMs);
+
+    const allowed = currentCount < maxRequests;
+
+    // Record this request if allowed
+    if (allowed) {
+      await db.insert(rateLimitRecords).values({
+        key,
+        endpoint,
+        requestCount: 1,
+        windowStart: now,
+        windowEnd: new Date(now.getTime() + windowMs),
+      });
+    }
+
+    return { allowed, remaining, reset };
+  } catch (error) {
+    console.error('Database rate limit error:', error);
+    // Fail open - allow the request if database has issues
+    return { allowed: true, remaining: maxRequests, reset: new Date() };
+  }
+}
+
+/**
  * Create a rate limiter middleware with the given configuration
+ *
+ * Automatically uses Redis if available, falls back to database.
  */
 export function createRateLimiter(config: RateLimitConfig) {
   const {
@@ -27,31 +140,19 @@ export function createRateLimiter(config: RateLimitConfig) {
     try {
       const key = keyGenerator(req);
       const endpoint = req.path;
-      const now = new Date();
-      const windowStart = new Date(now.getTime() - windowMs);
 
-      // Get current request count in the window
-      const [record] = await db
-        .select({
-          count: sql<number>`COALESCE(SUM(${rateLimitRecords.requestCount}), 0)`,
-        })
-        .from(rateLimitRecords)
-        .where(
-          and(
-            eq(rateLimitRecords.key, key),
-            eq(rateLimitRecords.endpoint, endpoint),
-            gte(rateLimitRecords.windowStart, windowStart)
-          )
-        );
-
-      const currentCount = Number(record?.count || 0);
+      // Use Redis if available, otherwise fall back to database
+      const useRedis = isRedisAvailable();
+      const result = useRedis
+        ? await checkRateLimitRedis(`${endpoint}:${key}`, maxRequests, windowMs)
+        : await checkRateLimitDatabase(key, endpoint, maxRequests, windowMs);
 
       // Set rate limit headers
       res.setHeader('X-RateLimit-Limit', maxRequests);
-      res.setHeader('X-RateLimit-Remaining', Math.max(0, maxRequests - currentCount - 1));
-      res.setHeader('X-RateLimit-Reset', new Date(now.getTime() + windowMs).toISOString());
+      res.setHeader('X-RateLimit-Remaining', result.remaining);
+      res.setHeader('X-RateLimit-Reset', result.reset.toISOString());
 
-      if (currentCount >= maxRequests) {
+      if (!result.allowed) {
         return res.status(429).json({
           success: false,
           error: {
@@ -61,15 +162,6 @@ export function createRateLimiter(config: RateLimitConfig) {
           },
         });
       }
-
-      // Record this request
-      await db.insert(rateLimitRecords).values({
-        key,
-        endpoint,
-        requestCount: 1,
-        windowStart: now,
-        windowEnd: new Date(now.getTime() + windowMs),
-      });
 
       next();
     } catch (error) {
@@ -136,12 +228,25 @@ export const requestCreateLimiter = createRateLimiter({
 });
 
 /**
- * Clean up old rate limit records (run periodically)
+ * Clean up old rate limit records from database (only needed for fallback mode)
+ *
+ * Redis automatically handles cleanup via TTL.
+ * This is only for database-backed rate limits.
  */
 export async function cleanupRateLimitRecords(): Promise<number> {
-  const result = await db
-    .delete(rateLimitRecords)
-    .where(sql`${rateLimitRecords.windowEnd} < NOW()`)
-    .returning();
-  return result.length;
+  // Skip cleanup if Redis is handling rate limits
+  if (isRedisAvailable()) {
+    return 0;
+  }
+
+  try {
+    const result = await db
+      .delete(rateLimitRecords)
+      .where(sql`${rateLimitRecords.windowEnd} < NOW()`)
+      .returning();
+    return result.length;
+  } catch (error) {
+    console.error('Error cleaning up rate limit records:', error);
+    return 0;
+  }
 }

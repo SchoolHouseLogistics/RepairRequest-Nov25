@@ -4,7 +4,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import session from "express-session";
-import pgSimple from "connect-pg-simple";
+import RedisStore from "connect-redis";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { db } from "./db.js";
@@ -13,6 +13,7 @@ import apiRoutes from "./routes/api";
 import { apiKeyAuthMiddleware } from "./middleware/apiKeyAuth";
 import { cleanupRateLimitRecords } from "./middleware/rateLimiter";
 import { setRLSContext } from "./middleware/rlsContext";
+import { getRedisClient, isRedisAvailable } from "./redis";
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -99,30 +100,6 @@ app.use('/attached_assets', express.static(path.resolve(process.cwd(), 'attached
 // Serve uploads directory for photo attachments
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
-// Configure PostgreSQL session store
-const PostgresStore = pgSimple(session);
-
-// Create sessions table if it doesn't exist
-const createSessionsTable = async () => {
-  try {
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        sid VARCHAR PRIMARY KEY NOT NULL,
-        sess JSONB NOT NULL,
-        expire TIMESTAMP NOT NULL
-      )
-    `);
-    if (!isProduction) {
-      console.log("✅ Sessions table ready");
-    }
-  } catch (error) {
-    console.error("❌ Error creating sessions table:", error);
-  }
-};
-
-// Initialize sessions table
-createSessionsTable();
-
 // Get or generate session secret
 const getSessionSecret = (): string => {
   if (process.env.SESSION_SECRET) {
@@ -134,18 +111,59 @@ const getSessionSecret = (): string => {
   return 'dev-secret-change-in-production';
 };
 
-app.use(session({
-  store: new PostgresStore({
+// Configure session store (Redis preferred, PostgreSQL fallback)
+const redisClient = getRedisClient();
+let sessionStore: any;
+
+if (redisClient && isRedisAvailable()) {
+  // Use Redis for sessions (preferred - better performance)
+  console.log('📦 Using Redis for session storage');
+  sessionStore = new RedisStore({
+    client: redisClient,
+    prefix: 'sess:',
+    ttl: 86400, // 24 hours in seconds
+  });
+} else {
+  // Fallback to PostgreSQL sessions (if Redis unavailable)
+  console.warn('⚠️  Redis unavailable, falling back to PostgreSQL session store');
+  const pgSimple = require('connect-pg-simple');
+  const PostgresStore = pgSimple(session);
+
+  // Create sessions table if it doesn't exist
+  const createSessionsTable = async () => {
+    try {
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          sid VARCHAR PRIMARY KEY NOT NULL,
+          sess JSONB NOT NULL,
+          expire TIMESTAMP NOT NULL
+        )
+      `);
+      if (!isProduction) {
+        console.log("✅ Sessions table ready");
+      }
+    } catch (error) {
+      console.error("❌ Error creating sessions table:", error);
+    }
+  };
+
+  createSessionsTable();
+
+  sessionStore = new PostgresStore({
     conObject: {
       connectionString: process.env.DATABASE_URL,
     },
     tableName: 'sessions',
-  }),
+  });
+}
+
+app.use(session({
+  store: sessionStore,
   secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
   proxy: true,
-  cookie: { 
+  cookie: {
     secure: isProduction,
     httpOnly: true,
     sameSite: 'lax',
