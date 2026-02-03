@@ -185,7 +185,12 @@ class SLAService {
   }
 
   /**
-   * Get SLA metrics for an organization
+   * Get SLA metrics for an organization (OPTIMIZED - No N+1 queries)
+   *
+   * This method uses SQL aggregations and JOINs instead of looping through
+   * individual requests, drastically improving performance at scale.
+   *
+   * Performance: O(1) database queries instead of O(n) where n = number of requests
    */
   async getOrganizationMetrics(
     organizationId: number,
@@ -208,15 +213,52 @@ class SLAService {
       conditions.push(lt(requests.createdAt, endDate));
     }
 
-    // Get all requests
-    const allRequests = await db
-      .select()
+    // ============================================
+    // OPTIMIZED QUERY 1: Get all request metrics with response/resolution times in a single query
+    // ============================================
+    const requestsWithTiming = await db
+      .select({
+        id: requests.id,
+        priority: requests.priority,
+        status: requests.status,
+        createdAt: requests.createdAt,
+        // Get first response time (first non-pending status update)
+        firstResponseAt: sql<Date | null>`(
+          SELECT MIN(${statusUpdates.updatedAt})
+          FROM ${statusUpdates}
+          WHERE ${statusUpdates.requestId} = ${requests.id}
+            AND ${statusUpdates.status} != ${REQUEST_STATUSES.PENDING}
+        )`,
+        // Get resolution time (completed status update)
+        resolvedAt: sql<Date | null>`(
+          SELECT MIN(${statusUpdates.updatedAt})
+          FROM ${statusUpdates}
+          WHERE ${statusUpdates.requestId} = ${requests.id}
+            AND ${statusUpdates.status} = ${REQUEST_STATUSES.COMPLETED}
+        )`,
+      })
       .from(requests)
       .where(and(...conditions));
 
-    // Initialize metrics
+    // ============================================
+    // OPTIMIZED QUERY 2: Get aggregate counts by priority
+    // ============================================
+    const priorityCounts = await db
+      .select({
+        priority: requests.priority,
+        total: sql<number>`COUNT(*)`,
+        open: sql<number>`COUNT(CASE WHEN ${requests.status} NOT IN (${REQUEST_STATUSES.COMPLETED}, ${REQUEST_STATUSES.CANCELLED}) THEN 1 END)`,
+      })
+      .from(requests)
+      .where(and(...conditions))
+      .groupBy(requests.priority);
+
+    // ============================================
+    // Process metrics in memory (single pass, no database queries)
+    // ============================================
+
     const metrics: SLAMetrics = {
-      totalRequests: allRequests.length,
+      totalRequests: requestsWithTiming.length,
       openRequests: 0,
       overdueResponse: 0,
       overdueResolution: 0,
@@ -226,11 +268,12 @@ class SLAService {
       byPriority: {},
     };
 
-    // Initialize priority buckets
-    for (const priority of Object.values(PRIORITY_LEVELS)) {
+    // Initialize priority buckets from query results
+    for (const priorityRow of priorityCounts) {
+      const priority = priorityRow.priority || 'medium';
       metrics.byPriority[priority] = {
-        total: 0,
-        open: 0,
+        total: Number(priorityRow.total),
+        open: Number(priorityRow.open),
         overdueResponse: 0,
         overdueResolution: 0,
         avgResponseTime: null,
@@ -238,72 +281,41 @@ class SLAService {
       };
     }
 
+    // Tracking variables for averages
+    const priorityResponseTimes: Record<string, number[]> = {};
+    const priorityResolutionTimes: Record<string, number[]> = {};
     let totalResponseTime = 0;
     let responseCount = 0;
     let totalResolutionTime = 0;
     let resolutionCount = 0;
     let compliantRequests = 0;
 
-    // Process each request
-    for (const request of allRequests) {
+    // Single pass through all requests
+    for (const request of requestsWithTiming) {
       const priority = request.priority || 'medium';
       const targets = this.getSLATargets(config, priority);
       const isOpen = request.status !== REQUEST_STATUSES.COMPLETED && request.status !== REQUEST_STATUSES.CANCELLED;
+      const createdAt = request.createdAt!;
 
-      // Update priority counts
-      if (metrics.byPriority[priority]) {
-        metrics.byPriority[priority].total++;
-        if (isOpen) {
-          metrics.byPriority[priority].open++;
-        }
-      }
+      const responseDeadline = new Date(createdAt.getTime() + targets.responseHours * 60 * 60 * 1000);
+      const resolutionDeadline = new Date(createdAt.getTime() + targets.resolutionHours * 60 * 60 * 1000);
 
       if (isOpen) {
         metrics.openRequests++;
       }
 
-      // Get response and resolution times
-      const [firstResponse] = await db
-        .select()
-        .from(statusUpdates)
-        .where(
-          and(
-            eq(statusUpdates.requestId, request.id),
-            ne(statusUpdates.status, REQUEST_STATUSES.PENDING)
-          )
-        )
-        .orderBy(statusUpdates.updatedAt)
-        .limit(1);
+      // Initialize tracking arrays
+      if (!priorityResponseTimes[priority]) {
+        priorityResponseTimes[priority] = [];
+        priorityResolutionTimes[priority] = [];
+      }
 
-      const [resolution] = await db
-        .select()
-        .from(statusUpdates)
-        .where(
-          and(
-            eq(statusUpdates.requestId, request.id),
-            eq(statusUpdates.status, REQUEST_STATUSES.COMPLETED)
-          )
-        )
-        .orderBy(statusUpdates.updatedAt)
-        .limit(1);
-
-      const createdAt = request.createdAt!;
-      const responseDeadline = new Date(createdAt.getTime() + targets.responseHours * 60 * 60 * 1000);
-      const resolutionDeadline = new Date(createdAt.getTime() + targets.resolutionHours * 60 * 60 * 1000);
-
-      // Check response SLA
-      if (firstResponse) {
-        const responseTime = (firstResponse.updatedAt!.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      // Calculate response metrics
+      if (request.firstResponseAt) {
+        const responseTime = (request.firstResponseAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
         totalResponseTime += responseTime;
         responseCount++;
-
-        if (metrics.byPriority[priority]) {
-          const currentAvg = metrics.byPriority[priority].avgResponseTime;
-          const count = metrics.byPriority[priority].total;
-          metrics.byPriority[priority].avgResponseTime = currentAvg
-            ? (currentAvg * (count - 1) + responseTime) / count
-            : responseTime;
-        }
+        priorityResponseTimes[priority].push(responseTime);
       } else if (isOpen && now > responseDeadline) {
         metrics.overdueResponse++;
         if (metrics.byPriority[priority]) {
@@ -311,23 +323,16 @@ class SLAService {
         }
       }
 
-      // Check resolution SLA
-      if (resolution) {
-        const resolutionTime = (resolution.updatedAt!.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      // Calculate resolution metrics
+      if (request.resolvedAt) {
+        const resolutionTime = (request.resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
         totalResolutionTime += resolutionTime;
         resolutionCount++;
+        priorityResolutionTimes[priority].push(resolutionTime);
 
         // Check if resolved within SLA
-        if (resolution.updatedAt! <= resolutionDeadline) {
+        if (request.resolvedAt <= resolutionDeadline) {
           compliantRequests++;
-        }
-
-        if (metrics.byPriority[priority]) {
-          const currentAvg = metrics.byPriority[priority].avgResolutionTime;
-          const count = metrics.byPriority[priority].total;
-          metrics.byPriority[priority].avgResolutionTime = currentAvg
-            ? (currentAvg * (count - 1) + resolutionTime) / count
-            : resolutionTime;
         }
       } else if (isOpen && now > resolutionDeadline) {
         metrics.overdueResolution++;
@@ -337,9 +342,28 @@ class SLAService {
       }
     }
 
-    // Calculate averages
-    metrics.avgResponseTimeHours = responseCount > 0 ? totalResponseTime / responseCount : null;
-    metrics.avgResolutionTimeHours = resolutionCount > 0 ? totalResolutionTime / resolutionCount : null;
+    // Calculate overall averages
+    metrics.avgResponseTimeHours = responseCount > 0
+      ? Math.round((totalResponseTime / responseCount) * 10) / 10
+      : null;
+
+    metrics.avgResolutionTimeHours = resolutionCount > 0
+      ? Math.round((totalResolutionTime / resolutionCount) * 10) / 10
+      : null;
+
+    // Calculate priority-specific averages
+    for (const priority in metrics.byPriority) {
+      const responseTimes = priorityResponseTimes[priority] || [];
+      const resolutionTimes = priorityResolutionTimes[priority] || [];
+
+      metrics.byPriority[priority].avgResponseTime = responseTimes.length > 0
+        ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
+        : null;
+
+      metrics.byPriority[priority].avgResolutionTime = resolutionTimes.length > 0
+        ? Math.round((resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length) * 10) / 10
+        : null;
+    }
 
     // Calculate compliance rate (completed requests within SLA / total completed)
     if (resolutionCount > 0) {
@@ -350,15 +374,41 @@ class SLAService {
   }
 
   /**
-   * Get overdue requests for an organization
+   * Get overdue requests for an organization (OPTIMIZED - No N+1 queries)
+   *
+   * This method fetches all overdue requests in a single query using
+   * subqueries for response and resolution times.
+   *
+   * Performance: O(1) database queries instead of O(n) where n = number of open requests
    */
   async getOverdueRequests(organizationId: number): Promise<RequestSLAStatus[]> {
     const config = await this.getSLAConfig(organizationId);
     const now = new Date();
 
-    // Get open requests
+    // ============================================
+    // OPTIMIZED: Single query to get all open requests with timing info
+    // ============================================
     const openRequests = await db
-      .select()
+      .select({
+        id: requests.id,
+        priority: requests.priority,
+        status: requests.status,
+        createdAt: requests.createdAt,
+        // Get first response time (first non-pending status update)
+        firstResponseAt: sql<Date | null>`(
+          SELECT MIN(${statusUpdates.updatedAt})
+          FROM ${statusUpdates}
+          WHERE ${statusUpdates.requestId} = ${requests.id}
+            AND ${statusUpdates.status} != ${REQUEST_STATUSES.PENDING}
+        )`,
+        // Get resolution time (completed status update)
+        resolvedAt: sql<Date | null>`(
+          SELECT MIN(${statusUpdates.updatedAt})
+          FROM ${statusUpdates}
+          WHERE ${statusUpdates.requestId} = ${requests.id}
+            AND ${statusUpdates.status} = ${REQUEST_STATUSES.COMPLETED}
+        )`,
+      })
       .from(requests)
       .where(
         and(
@@ -370,12 +420,54 @@ class SLAService {
       )
       .orderBy(requests.createdAt);
 
+    // Process results in memory (no additional queries)
     const overdueRequests: RequestSLAStatus[] = [];
 
     for (const request of openRequests) {
-      const slaStatus = await this.getRequestSLAStatus(request.id);
-      if (slaStatus && (slaStatus.isOverdueResponse || slaStatus.isOverdueResolution)) {
-        overdueRequests.push(slaStatus);
+      const priority = request.priority || 'medium';
+      const targets = this.getSLATargets(config, priority);
+      const createdAt = request.createdAt!;
+
+      const responseDeadline = new Date(createdAt.getTime() + targets.responseHours * 60 * 60 * 1000);
+      const resolutionDeadline = new Date(createdAt.getTime() + targets.resolutionHours * 60 * 60 * 1000);
+
+      const firstResponseAt = request.firstResponseAt;
+      const resolvedAt = request.resolvedAt;
+
+      // Calculate response time in hours
+      let responseTimeHours: number | null = null;
+      if (firstResponseAt) {
+        responseTimeHours = (firstResponseAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      }
+
+      // Calculate resolution time in hours
+      let resolutionTimeHours: number | null = null;
+      if (resolvedAt) {
+        resolutionTimeHours = (resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      }
+
+      // Determine if overdue
+      const isOverdueResponse = !firstResponseAt && now > responseDeadline;
+      const isOverdueResolution = now > resolutionDeadline;
+
+      // Only include if actually overdue
+      if (isOverdueResponse || isOverdueResolution) {
+        overdueRequests.push({
+          requestId: request.id,
+          priority,
+          status: request.status || 'pending',
+          createdAt,
+          firstResponseAt,
+          resolvedAt,
+          responseTargetHours: targets.responseHours,
+          resolutionTargetHours: targets.resolutionHours,
+          responseDeadline,
+          resolutionDeadline,
+          isOverdueResponse,
+          isOverdueResolution,
+          responseTimeHours,
+          resolutionTimeHours,
+        });
       }
     }
 
