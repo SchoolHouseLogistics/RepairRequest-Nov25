@@ -39,9 +39,9 @@ import {
   insertContactMessageSchema,
   users,
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql, isNull } from "drizzle-orm";
 import { db, contactMessages } from "./db";
-import { requests } from "@shared/schema";
+import { requests, organizations } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
 // Fix error with multer types
@@ -174,7 +174,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      const user = await dbStorage.getUserByEmail(email);
+      // Bypass RLS to look up user (unauthenticated endpoint)
+      const user = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT set_config('app.is_super_admin', 'true', true)`);
+        const [found] = await tx
+          .select()
+          .from(users)
+          .where(and(eq(users.email, email), isNull(users.deletedAt)));
+        return found;
+      });
 
       // Always return success to prevent email enumeration attacks
       if (!user) {
@@ -187,7 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build the reset URL
       const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-      const protocol = req.get('x-forwarded-proto') || 'https';
+      const protocol = req.protocol || 'https';
       const resetUrl = `${protocol}://${host}/reset-password?token=${token}`;
 
       // Send the email
@@ -371,6 +379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check for OAuth errors from Google
       if (req.query.error) {
+        console.error("Google OAuth error from provider:", req.query.error);
         return res.redirect("/?error=oauth_error");
       }
 
@@ -379,29 +388,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/?error=no_code");
       }
 
-      // Get redirect URI using same logic as login route
-      const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
-      const protocol = req.get('x-forwarded-proto') || 'https';
-      const redirectUri = `${protocol}://${host}/api/auth/callback/google`;
+      // Validate required environment variables
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        console.error("OAuth callback: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET not configured");
+        return res.redirect("/?error=callback_failed");
+      }
 
-      // Exchange authorization code for access token
+      // Get redirect URI using the same helper as the login route
+      const redirectUri = getOAuthRedirectUri(req);
       console.log("OAuth callback - redirect URI:", redirectUri);
 
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code: req.query.code as string,
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      const tokenData = await tokenResponse.json();
+      // Exchange authorization code for access token
+      let tokenData: any;
+      try {
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            code: req.query.code as string,
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }),
+        });
+        tokenData = await tokenResponse.json();
+      } catch (fetchError) {
+        console.error("OAuth token exchange network error:", fetchError);
+        return res.redirect("/?error=token_failed");
+      }
 
       if (!tokenData.access_token) {
         console.error("OAuth token exchange failed:", tokenData);
@@ -409,35 +426,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user profile from Google
-      const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${tokenData.access_token}`,
-        },
-      });
-
-      const profile = await profileResponse.json();
+      let profile: any;
+      try {
+        const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+          },
+        });
+        profile = await profileResponse.json();
+      } catch (fetchError) {
+        console.error("OAuth profile fetch network error:", fetchError);
+        return res.redirect("/?error=callback_failed");
+      }
 
       if (!profile.email) {
+        console.error("OAuth profile missing email:", profile);
         return res.redirect("/?error=no_email");
       }
 
-      // Find or create user
-      let user = await dbStorage.getUserByEmail(profile.email);
-      if (!user) {
-        // Get default organization for new users
-        const defaultOrgId = await getDefaultOrganizationId();
+      // Find or create user inside a transaction with RLS bypass.
+      // The OAuth callback runs before the user is authenticated, so RLS
+      // policies (which filter by organization_id) would block access to
+      // existing users and organizations. We set is_super_admin=true for
+      // the duration of this transaction to allow the lookup/insert.
+      const user = await db.transaction(async (tx) => {
+        // Bypass RLS for this transaction - user is not yet authenticated
+        await tx.execute(sql`SELECT set_config('app.is_super_admin', 'true', true)`);
 
-        // Create new user using upsertUser
-        const userData = {
-          id: profile.id,
-          email: profile.email,
-          firstName: profile.given_name || '',
-          lastName: profile.family_name || '',
-          role: 'requester' as const,
-          organizationId: defaultOrgId,
-          profileImageUrl: profile.picture || null,
-        };
-        user = await dbStorage.upsertUser(userData);
+        // Look up existing user by email
+        const [existingUser] = await tx
+          .select()
+          .from(users)
+          .where(and(eq(users.email, profile.email), isNull(users.deletedAt)));
+
+        if (existingUser) {
+          return existingUser;
+        }
+
+        // Get default organization for new users
+        const [defaultOrg] = await tx
+          .select({ id: organizations.id })
+          .from(organizations)
+          .where(isNull(organizations.deletedAt))
+          .orderBy(organizations.id)
+          .limit(1);
+
+        const defaultOrgId = defaultOrg?.id;
+
+        // Create new user (or update if email conflict from a previous partial insert)
+        const [newUser] = await tx
+          .insert(users)
+          .values({
+            id: profile.id,
+            email: profile.email,
+            firstName: profile.given_name || '',
+            lastName: profile.family_name || '',
+            role: 'requester' as const,
+            organizationId: defaultOrgId,
+            profileImageUrl: profile.picture || null,
+          })
+          .onConflictDoUpdate({
+            target: users.email,
+            set: {
+              firstName: profile.given_name || '',
+              lastName: profile.family_name || '',
+              profileImageUrl: profile.picture || null,
+              updatedAt: new Date(),
+            },
+          })
+          .returning();
+
+        return newUser;
+      });
+
+      if (!user) {
+        console.error("OAuth callback: failed to find or create user for", profile.email);
+        return res.redirect("/?error=callback_failed");
       }
 
       // Set session
@@ -469,7 +533,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const getOAuthRedirectUri = (req: any) => {
     // Use the request host to support both dev and production domains
     const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
-    const protocol = req.get('x-forwarded-proto') || 'https';
+    // Use req.protocol which correctly handles trust proxy settings,
+    // rather than reading x-forwarded-proto directly (which can be multi-valued)
+    const protocol = req.protocol || 'https';
     return `${protocol}://${host}/api/auth/callback/google`;
   };
 
@@ -2387,32 +2453,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // Check if user exists
-      const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
-      if (existing) {
-        return res.status(409).json({ message: "User with this email already exists" });
-      }
-
       // Hash password
       const hashed = await bcrypt.hash(password, 10);
 
-      // Get default organization for new users
-      const defaultOrgId = await getDefaultOrganizationId();
-
-      // Create user
+      // Create user inside a transaction with RLS bypass (user is not yet authenticated)
       const id = crypto.randomUUID();
       const now = new Date();
-      const [user] = await db.insert(users).values({
-        id,
-        email,
-        firstName,
-        lastName,
-        password: hashed,
-        role: "requester",
-        organizationId: defaultOrgId,
-        createdAt: now,
-        updatedAt: now,
-      }).returning();
+      const user = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT set_config('app.is_super_admin', 'true', true)`);
+
+        // Check if user exists
+        const [existing] = await tx
+          .select()
+          .from(users)
+          .where(and(eq(users.email, email), isNull(users.deletedAt)));
+        if (existing) {
+          return null; // signal that user already exists
+        }
+
+        // Get default organization for new users
+        const [defaultOrg] = await tx
+          .select({ id: organizations.id })
+          .from(organizations)
+          .where(isNull(organizations.deletedAt))
+          .orderBy(organizations.id)
+          .limit(1);
+
+        const [newUser] = await tx.insert(users).values({
+          id,
+          email,
+          firstName,
+          lastName,
+          password: hashed,
+          role: "requester",
+          organizationId: defaultOrg?.id,
+          createdAt: now,
+          updatedAt: now,
+        }).returning();
+
+        return newUser;
+      });
+
+      if (!user) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
 
       // Set session for user after signup
       req.session.user = {
@@ -2460,8 +2544,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       email = email.trim().toLowerCase();
       password = password.trim();
 
-      // Find user by email
-      const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+      // Find user by email, bypassing RLS (user is not yet authenticated)
+      const user = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT set_config('app.is_super_admin', 'true', true)`);
+        const [found] = await tx
+          .select()
+          .from(users)
+          .where(and(eq(users.email, email), isNull(users.deletedAt)));
+        return found;
+      });
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
