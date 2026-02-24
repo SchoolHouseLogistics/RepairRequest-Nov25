@@ -12,6 +12,10 @@ const ADMIN_NOTIFICATION_TEMPLATE_KEY = process.env.ZEPTOMAIL_ADMIN_NOTIFICATION
 const LABOR_REQUESTER_TEMPLATE_KEY = process.env.ZEPTOMAIL_LABOR_REQUESTER_TEMPLATE_KEY;
 const LABOR_ADMIN_TEMPLATE_KEY = process.env.ZEPTOMAIL_LABOR_ADMIN_TEMPLATE_KEY;
 
+// Tech request templates
+const TECH_REQUESTER_TEMPLATE_KEY = process.env.ZEPTOMAIL_TECH_REQUESTER_TEMPLATE_KEY || REQUESTER_TEMPLATE_KEY;
+const TECH_ADMIN_TEMPLATE_KEY = process.env.ZEPTOMAIL_TECH_ADMIN_TEMPLATE_KEY || ADMIN_NOTIFICATION_TEMPLATE_KEY;
+
 let client: any = null;
 
 function getClient() {
@@ -34,6 +38,10 @@ export function isRequestEmailConfigured(): boolean {
 
 export function isLaborEmailConfigured(): boolean {
   return !!(ZEPTOMAIL_API_KEY && LABOR_REQUESTER_TEMPLATE_KEY && LABOR_ADMIN_TEMPLATE_KEY);
+}
+
+export function isTechEmailConfigured(): boolean {
+  return !!(ZEPTOMAIL_API_KEY && TECH_REQUESTER_TEMPLATE_KEY && TECH_ADMIN_TEMPLATE_KEY);
 }
 
 interface EmailParams {
@@ -387,4 +395,136 @@ export async function sendLaborRequestNotificationEmails(
   if (!requesterEmailSent && adminEmailsSent === 0) {
     throw new Error('Failed to send any labor notification emails');
   }
+}
+
+interface TechRequestEmailData {
+  requestId: number;
+  category: string;
+  deviceType: string;
+  deviceLocation: string;
+  assetTag: string;
+  description: string;
+  errorMessage: string;
+  priority: string;
+  requesterName: string;
+  requesterEmail: string;
+  organizationName: string;
+  createdAt: Date;
+}
+
+export async function sendTechRequestNotificationEmails(
+  requestData: TechRequestEmailData,
+  techStaffEmails: string[]
+): Promise<void> {
+  console.log('=== TECH REQUEST EMAIL NOTIFICATION CALLED ===');
+  console.log('Request data:', JSON.stringify(requestData, null, 2));
+  console.log('Tech staff emails:', techStaffEmails);
+  console.log('Tech requester template key exists:', !!TECH_REQUESTER_TEMPLATE_KEY);
+  console.log('Tech admin template key exists:', !!TECH_ADMIN_TEMPLATE_KEY);
+
+  const mailClient = getClient();
+
+  if (!mailClient) {
+    console.error("ZeptoMail client not available - skipping tech email notifications");
+    return;
+  }
+
+  if (!TECH_REQUESTER_TEMPLATE_KEY || !TECH_ADMIN_TEMPLATE_KEY) {
+    console.error("ZeptoMail tech request template keys not configured - skipping email notifications");
+    return;
+  }
+
+  const submittedAt = requestData.createdAt.toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+
+  const mergeInfo = {
+    request_id: String(requestData.requestId),
+    request_type: 'tech',
+    request_type_title: 'Tech Support',
+    title: `Tech Support: ${requestData.category}`,
+    category: requestData.category,
+    device_type: requestData.deviceType || 'Not specified',
+    device_location: requestData.deviceLocation || 'Not specified',
+    asset_tag: requestData.assetTag || 'N/A',
+    description: requestData.description,
+    error_message: requestData.errorMessage || 'None provided',
+    priority: requestData.priority,
+    priority_upper: requestData.priority.toUpperCase(),
+    requester_name: requestData.requesterName,
+    requester_email: requestData.requesterEmail,
+    organization_name: requestData.organizationName,
+    submitted_at: submittedAt,
+    submitted_date: requestData.createdAt.toLocaleDateString(),
+    submitted_time: requestData.createdAt.toLocaleTimeString(),
+  };
+
+  let requesterEmailSent = false;
+  let staffEmailsSent = 0;
+
+  try {
+    console.log('Sending tech requester notification to:', requestData.requesterEmail);
+    await mailClient.sendMailWithTemplate({
+      template_key: TECH_REQUESTER_TEMPLATE_KEY,
+      from: {
+        address: FROM_EMAIL,
+        name: "RepairRequest Notifications",
+      },
+      to: [
+        {
+          email_address: {
+            address: requestData.requesterEmail,
+            name: requestData.requesterName,
+          },
+        },
+      ],
+      merge_info: mergeInfo,
+    });
+    console.log('Tech requester notification sent successfully');
+    requesterEmailSent = true;
+  } catch (error) {
+    console.error('Failed to send tech requester notification email:', error);
+  }
+
+  for (const staffEmail of techStaffEmails) {
+    try {
+      console.log('Sending tech staff notification to:', staffEmail);
+      await mailClient.sendMailWithTemplate({
+        template_key: TECH_ADMIN_TEMPLATE_KEY,
+        from: {
+          address: FROM_EMAIL,
+          name: "RepairRequest Notifications",
+        },
+        to: [
+          {
+            email_address: {
+              address: staffEmail,
+              name: "Tech Staff",
+            },
+          },
+        ],
+        reply_to: [
+          {
+            address: requestData.requesterEmail,
+            name: requestData.requesterName,
+          },
+        ],
+        merge_info: mergeInfo,
+      });
+      console.log(`Tech staff notification sent to ${staffEmail}`);
+      staffEmailsSent++;
+    } catch (error) {
+      console.error(`Failed to send tech staff notification to ${staffEmail}:`, error);
+    }
+  }
+
+  console.log(`Tech request notification summary for #${requestData.requestId}:`);
+  console.log(`- Requester email sent: ${requesterEmailSent}`);
+  console.log(`- Staff emails sent: ${staffEmailsSent}/${techStaffEmails.length}`);
 }

@@ -21,6 +21,7 @@ export default function Navbar({ toggleMobileSidebar, user }: NavbarProps) {
   const isAdmin = user?.role === 'admin';
   const isSuperAdmin = user?.role === 'super_admin';
   const isMaintenance = user?.role === 'maintenance' || user?.role === 'admin';
+  const isTech = user?.role === 'tech';
 
   const navItems = isSuperAdmin ? [
     { href: "/dashboard", label: "Dashboard", icon: "dashboard", access: "super_admin" },
@@ -38,6 +39,7 @@ export default function Navbar({ toggleMobileSidebar, user }: NavbarProps) {
     { href: "/assigned-requests", label: "Assigned to Me", icon: "engineering", access: "admin" },
     { href: "/new-building-request", label: "New Repair Request", icon: "home_repair_service", access: "admin" },
     { href: "/new-facilities-request", label: "New Labor Request", icon: "event_seat", access: "admin" },
+    { href: "/new-tech-request", label: "New Tech Request", icon: "computer", access: "admin" },
   ] : user?.role === 'maintenance' ? [
     { href: "/dashboard", label: "Dashboard", icon: "dashboard", access: "maintenance" },
     { href: "/assigned-requests", label: "Assigned to Me", icon: "engineering", access: "maintenance" },
@@ -45,10 +47,16 @@ export default function Navbar({ toggleMobileSidebar, user }: NavbarProps) {
     { href: "/manage-requests", label: "Manage Requests", icon: "manage_accounts", access: "maintenance" },
     { href: "/new-building-request", label: "New Repair Request", icon: "home_repair_service", access: "maintenance" },
     { href: "/new-facilities-request", label: "New Facilities Request", icon: "event_seat", access: "maintenance" },
+  ] : isTech ? [
+    { href: "/dashboard", label: "Dashboard", icon: "dashboard", access: "tech" },
+    { href: "/manage-requests", label: "Tech Requests", icon: "computer", access: "tech" },
+    { href: "/assigned-requests", label: "Assigned to Me", icon: "engineering", access: "tech" },
+    { href: "/new-tech-request", label: "New Tech Request", icon: "computer", access: "tech" },
   ] : [
     { href: "/dashboard", label: "Dashboard", icon: "dashboard", access: "all" },
     { href: "/new-building-request", label: "New Repair Request", icon: "home_repair_service", access: "all" },
     { href: "/new-facilities-request", label: "New Labor Request", icon: "event_seat", access: "all" },
+    { href: "/new-tech-request", label: "New Tech Request", icon: "computer", access: "all" },
     { href: "/my-requests", label: "My Requests", icon: "assignment", access: "all" },
     { href: "/room-history", label: "Room History", icon: "history", access: "all" },
   ];

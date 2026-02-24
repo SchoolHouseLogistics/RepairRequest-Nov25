@@ -314,6 +314,67 @@ export default function RequestDetail({ id }: RequestDetailProps) {
                 </div>
               )}
 
+              {/* For Tech Requests - Show tech details */}
+              {request.requestType === 'tech' && request.techDetails && (
+                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 -mx-6">
+                  <dt className="text-sm font-medium text-gray-500">Tech Details</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    <div className="space-y-3">
+                      {request.techDetails.category && (
+                        <div>
+                          <span className="font-medium">Category:</span>{" "}
+                          <span className="capitalize">{request.techDetails.category}</span>
+                        </div>
+                      )}
+                      {request.techDetails.deviceType && (
+                        <div>
+                          <span className="font-medium">Device Type:</span>{" "}
+                          <span className="capitalize">{request.techDetails.deviceType}</span>
+                        </div>
+                      )}
+                      {request.techDetails.deviceLocation && (
+                        <div>
+                          <span className="font-medium">Device Location:</span>{" "}
+                          {request.techDetails.deviceLocation}
+                        </div>
+                      )}
+                      {request.techDetails.assetTag && (
+                        <div>
+                          <span className="font-medium">Asset Tag:</span>{" "}
+                          {request.techDetails.assetTag}
+                        </div>
+                      )}
+                      {request.techDetails.description && (
+                        <div>
+                          <span className="font-medium">Description:</span>
+                          <p className="mt-1">{request.techDetails.description}</p>
+                        </div>
+                      )}
+                      {request.techDetails.errorMessage && (
+                        <div>
+                          <span className="font-medium">Error Message:</span>
+                          <pre className="mt-1 text-xs bg-gray-100 rounded p-2 whitespace-pre-wrap font-mono">
+                            {request.techDetails.errorMessage}
+                          </pre>
+                        </div>
+                      )}
+                      {request.techDetails.stepsToReproduce && (
+                        <div>
+                          <span className="font-medium">Steps to Reproduce:</span>
+                          <p className="mt-1">{request.techDetails.stepsToReproduce}</p>
+                        </div>
+                      )}
+                      {request.techDetails.urgencyReason && (
+                        <div>
+                          <span className="font-medium">Urgency Reason:</span>{" "}
+                          {request.techDetails.urgencyReason}
+                        </div>
+                      )}
+                    </div>
+                  </dd>
+                </div>
+              )}
+
               {request.items?.otherNeeds && (
                 <div className="px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 -mx-6">
                   <dt className="text-sm font-medium text-gray-500">Other Notes</dt>

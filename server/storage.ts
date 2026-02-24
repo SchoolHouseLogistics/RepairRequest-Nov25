@@ -154,6 +154,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getMaintenanceStaff(organizationId: number): Promise<User[]>;
+  getTechStaff(organizationId: number): Promise<User[]>;
   getAllUsers(): Promise<any[]>;
   updateUserRole(userId: string, role: string): Promise<User>;
   updateUserOrganization(userId: string, organizationId: number): Promise<User>;
@@ -398,6 +399,14 @@ export class DatabaseStorage implements IStorage {
         eq(users.role, 'maintenance'),
         eq(users.role, 'admin')
       ),
+      eq(users.organizationId, organizationId),
+      isNull(users.deletedAt)
+    ));
+  }
+
+  async getTechStaff(organizationId: number): Promise<User[]> {
+    return db.select().from(users).where(and(
+      or(eq(users.role, 'tech'), eq(users.role, 'admin')),
       eq(users.organizationId, organizationId),
       isNull(users.deletedAt)
     ));
@@ -1112,8 +1121,8 @@ export class DatabaseStorage implements IStorage {
       return true;
     }
 
-    // Admin/maintenance can access requests within their organization only
-    if (user.role === 'admin' || user.role === 'maintenance') {
+    // Admin/maintenance/tech can access requests within their organization only
+    if (user.role === 'admin' || user.role === 'maintenance' || user.role === 'tech') {
       return request.organizationId === user.organizationId;
     }
 

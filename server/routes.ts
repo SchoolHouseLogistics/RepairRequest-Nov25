@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { isAuthenticated } from "./subAuth.js";
-import { sendRequestNotificationEmails, sendLaborRequestNotificationEmails } from "./emailService";
+import { sendRequestNotificationEmails, sendLaborRequestNotificationEmails, sendTechRequestNotificationEmails } from "./emailService";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -80,7 +80,7 @@ const bulkSchema = z.array(
     email: z.string().email(),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
-    role: z.enum(["requester", "maintenance", "admin", "super_admin"]),
+    role: z.enum(["requester", "maintenance", "tech", "admin", "super_admin"]),
     organizationId: z.number().nullable().optional(),
   })
 );
@@ -667,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let stats;
       if (user.role === 'super_admin') {
         stats = await dbStorage.getAdminDashboardStats();
-      } else if (user.role === 'admin' || user.role === 'maintenance') {
+      } else if (user.role === 'admin' || user.role === 'maintenance' || user.role === 'tech') {
         stats = await dbStorage.getAdminDashboardStats(user.organizationId);
       } else {
         stats = await dbStorage.getUserDashboardStats(userId);
@@ -688,7 +688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let requests;
       if (user.role === 'super_admin') {
         requests = await dbStorage.getRecentRequests(10);
-      } else if (user.role === 'admin' || user.role === 'maintenance') {
+      } else if (user.role === 'admin' || user.role === 'maintenance' || user.role === 'tech') {
         requests = await dbStorage.getRecentRequests(10, user.organizationId);
       } else {
         requests = await dbStorage.getUserRequests(userId, 10);
@@ -1015,7 +1015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (user.role !== 'admin' && user.role !== 'maintenance') {
+      if (user.role !== 'admin' && user.role !== 'maintenance' && user.role !== 'tech') {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -1025,6 +1025,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching maintenance staff:", error);
       res.status(500).json({ message: "Failed to fetch maintenance staff" });
+    }
+  });
+
+  // Get all tech staff
+  app.get("/api/users/tech", authMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.userId;
+      const user = req.user;
+
+      if (!userId || !user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      if (user.role !== 'admin' && user.role !== 'tech' && user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const techStaff = await dbStorage.getTechStaff(user.organizationId!);
+      res.json(techStaff);
+    } catch (error) {
+      console.error("Error fetching tech staff:", error);
+      res.status(500).json({ message: "Failed to fetch tech staff" });
     }
   });
 
@@ -1260,23 +1282,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const organization = user.organizationId !== undefined
           ? await dbStorage.getOrganization(user.organizationId)
           : undefined;
-        const adminEmails = user.organizationId !== undefined
-          ? await dbStorage.getOrganizationAdminEmails(user.organizationId)
+        const techStaff = user.organizationId !== undefined
+          ? await dbStorage.getTechStaff(user.organizationId)
           : [];
+        const techStaffEmails = techStaff.map((u: any) => u.email).filter(Boolean);
 
-        if (organization && adminEmails.length > 0) {
-          await sendRequestNotificationEmails({
+        if (organization && techStaffEmails.length > 0) {
+          await sendTechRequestNotificationEmails({
             requestId: createdRequest.id,
-            title: `Tech Support: ${category}`,
-            building: deviceLocation || 'Not specified',
-            roomNumber: '',
+            category,
+            deviceType: deviceType || '',
+            deviceLocation: deviceLocation || '',
+            assetTag: assetTag || '',
             description,
+            errorMessage: errorMessage || '',
             priority: priority || 'medium',
             requesterName: `${user.firstName} ${user.lastName}`,
             requesterEmail: user.email,
             organizationName: organization.name,
             createdAt: new Date()
-          }, adminEmails);
+          }, techStaffEmails);
         }
       } catch (emailError) {
         console.error("Email notification error:", emailError);
@@ -1344,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (user.role !== 'maintenance' && user.role !== 'admin') {
+      if (user.role !== 'maintenance' && user.role !== 'tech' && user.role !== 'admin') {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -1368,7 +1393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = req.query.status as string | undefined;
       const organizationId = req.query.organizationId as string | undefined;
 
-      if (user.role !== 'admin' && user.role !== 'maintenance' && user.role !== 'super_admin') {
+      if (user.role !== 'admin' && user.role !== 'maintenance' && user.role !== 'tech' && user.role !== 'super_admin') {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -1504,7 +1529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestId = parseInt(req.params.id);
 
       // Check role permission
-      if (user?.role !== 'admin' && user?.role !== 'maintenance' && user?.role !== 'super_admin') {
+      if (user?.role !== 'admin' && user?.role !== 'maintenance' && user?.role !== 'tech' && user?.role !== 'super_admin') {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
@@ -1558,7 +1583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has proper permissions to update status
-      const canUpdateStatus = user?.role === 'admin' || user?.role === 'maintenance' || user?.role === 'super_admin' ||
+      const canUpdateStatus = user?.role === 'admin' || user?.role === 'maintenance' || user?.role === 'tech' || user?.role === 'super_admin' ||
         (req.body.status === 'cancelled' && await dbStorage.isRequestor(userId, requestId));
 
       if (!canUpdateStatus) {
@@ -2285,7 +2310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { role } = req.body;
 
       // Validate role
-      const validRoles = ['requester', 'maintenance', 'admin', 'super_admin'];
+      const validRoles = ['requester', 'maintenance', 'tech', 'admin', 'super_admin'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }

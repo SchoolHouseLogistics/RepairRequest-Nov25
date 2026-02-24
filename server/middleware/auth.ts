@@ -6,7 +6,7 @@ import { ERROR_CODES } from '../constants';
 const sessionUserSchema = z.object({
   id: z.string().min(1),
   email: z.string().email(),
-  role: z.enum(['requester', 'maintenance', 'admin', 'super_admin']),
+  role: z.enum(['requester', 'maintenance', 'tech', 'admin', 'super_admin']),
   firstName: z.string(),
   lastName: z.string(),
   organizationId: z.number().optional(),

@@ -31,7 +31,7 @@ export default function Dashboard() {
 
   const { data: assignedRequests, isLoading: isLoadingAssigned } = useQuery({
     queryKey: ["/api/requests/assigned"],
-    enabled: user?.role === 'maintenance',
+    enabled: user?.role === 'maintenance' || user?.role === 'tech',
   });
 
   const { data: buildingsData, isLoading: isLoadingBuildings } = useQuery({
@@ -48,8 +48,8 @@ export default function Dashboard() {
         <h1 className="text-2xl font-heading font-bold text-gray-900">Dashboard</h1>
         
         {/* Stats Overview */}
-        {/* Statistics Cards - Show for admins only */}
-        {user && user.role === 'admin' && (
+        {/* Statistics Cards - Show for admins and tech staff */}
+        {user && (user.role === 'admin' || user.role === 'tech') && (
           <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {isLoadingStats ? (
               <>
@@ -84,8 +84,8 @@ export default function Dashboard() {
           </div>
         )}
         
-        {/* Assigned Requests - Show for maintenance users */}
-        {user && user.role === 'maintenance' && (
+        {/* Assigned Requests - Show for maintenance and tech users */}
+        {user && (user.role === 'maintenance' || user.role === 'tech') && (
           <div className="mt-8">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-heading font-medium text-gray-900">Assigned to Me</h2>
@@ -227,6 +227,27 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-medium text-gray-900 mb-2">Labor Request</h3>
                       <p className="text-gray-600">Use this if there is an event where you will need maintenance to assist with labor</p>
+                    </div>
+                  </div>
+                </a>
+              </Link>
+            </div>
+
+            {/* Tech Support Request */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <Link to="/new-tech-request">
+                <a className="block hover:bg-gray-50 transition-colors duration-200 rounded-lg p-4 -m-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Tech Support Request</h3>
+                      <p className="text-gray-600">Report a technology issue such as a broken computer, network problem, or software error</p>
                     </div>
                   </div>
                 </a>

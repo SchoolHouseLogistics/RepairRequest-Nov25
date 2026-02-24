@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import RequestForm from "@/pages/RequestForm";
 import BuildingRequestForm from "@/pages/BuildingRequestForm";
+import TechRequestForm from "@/pages/TechRequestForm";
 import RequestDetail from "@/pages/RequestDetail";
 import MyRequests from "@/pages/MyRequests";
 import AssignedRequests from "@/pages/AssignedRequests";
@@ -138,6 +139,7 @@ function AppContent() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/new-facilities-request" element={<RequestForm />} />
           <Route path="/new-building-request" element={<BuildingRequestForm />} />
+          <Route path="/new-tech-request" element={<TechRequestForm />} />
           <Route path="/requests/:id" element={<RequestDetailWrapper />} />
           <Route path="/my-requests" element={<MyRequests />} />
           <Route path="/assigned-requests" element={<AssignedRequests />} />

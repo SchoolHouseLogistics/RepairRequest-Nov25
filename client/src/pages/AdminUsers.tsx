@@ -21,7 +21,7 @@ const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  role: z.enum(['requester', 'maintenance', 'admin', 'super_admin']),
+  role: z.enum(['requester', 'maintenance', 'tech', 'admin', 'super_admin']),
   organizationId: z.number().optional(),
 }).refine((data) => {
   if (data.role !== 'super_admin' && !data.organizationId) {
@@ -211,6 +211,7 @@ export default function AdminUsers() {
       case 'super_admin': return 'destructive';
       case 'admin': return 'default';
       case 'maintenance': return 'secondary';
+      case 'tech': return 'secondary';
       default: return 'outline';
     }
   };
@@ -220,6 +221,7 @@ export default function AdminUsers() {
       case 'super_admin': return 'Super Admin';
       case 'admin': return 'Admin';
       case 'maintenance': return 'Maintenance';
+      case 'tech': return 'Tech';
       case 'requester': return 'Requester';
       default: return role;
     }
@@ -309,6 +311,7 @@ export default function AdminUsers() {
                             <SelectContent>
                               <SelectItem value="requester">Requester</SelectItem>
                               <SelectItem value="maintenance">Maintenance</SelectItem>
+                              <SelectItem value="tech">Tech</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="super_admin">Super Admin</SelectItem>
                             </SelectContent>
@@ -392,6 +395,7 @@ export default function AdminUsers() {
                     <SelectItem value="super_admin">Super Admin</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="tech">Tech</SelectItem>
                     <SelectItem value="requester">Requester</SelectItem>
                   </SelectContent>
                 </Select>
@@ -479,6 +483,7 @@ export default function AdminUsers() {
                           <SelectContent>
                             <SelectItem value="requester">Requester</SelectItem>
                             <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="tech">Tech</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="super_admin">Super Admin</SelectItem>
                           </SelectContent>
