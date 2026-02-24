@@ -73,19 +73,6 @@ export default function Sidebar({ isMobileOpen, closeMobileSidebar, user }: Side
     )}>
       <div className="flex flex-col w-64 bg-white shadow-lg relative z-10">
         <div className="h-0 flex-1 flex flex-col overflow-y-auto">
-          {/* User Info */}
-          <div className="px-4 py-6 bg-gray-50 border-b">
-            <div className="flex items-center">
-              <UserAvatar user={user} />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-800">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role || 'User'}</p>
-              </div>
-            </div>
-          </div>
-          
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1">
             {navItems.map((item) => {
@@ -131,7 +118,24 @@ export default function Sidebar({ isMobileOpen, closeMobileSidebar, user }: Side
           </nav>
         </div>
         
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-gray-200">
+          {/* User profile link */}
+          <Link
+            to="/profile"
+            onClick={() => { if (isMobileOpen) closeMobileSidebar(); }}
+            className="flex items-center px-4 py-4 hover:bg-gray-50 group"
+          >
+            <UserAvatar user={user} />
+            <div className="ml-3 overflow-hidden">
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">{user?.role || 'User'}</p>
+            </div>
+          </Link>
+
+          {/* Sign Out */}
+          <div className="px-4 pb-4">
           <div
             className="flex items-center text-gray-600 hover:text-primary cursor-pointer select-none"
             onClick={async (e) => {
@@ -164,6 +168,7 @@ export default function Sidebar({ isMobileOpen, closeMobileSidebar, user }: Side
           >
             <span className="material-icons mr-2">logout</span>
             <span>Sign Out</span>
+          </div>
           </div>
         </div>
       </div>

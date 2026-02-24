@@ -2421,6 +2421,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change own password (authenticated users)
+  app.patch("/api/profile/password", authMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "currentPassword and newPassword are required" });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters" });
+      }
+
+      const user = await dbStorage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!user.password) {
+        return res.status(400).json({ message: "Password change is not available for accounts using Google Sign-In" });
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) return res.status(400).json({ message: "Current password is incorrect" });
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await dbStorage.updateUserPassword(userId, hashed);
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
   // Neon DB Email/Password Signup
   app.post("/api/auth/signup", async (req, res) => {
     try {
