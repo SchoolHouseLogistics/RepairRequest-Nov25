@@ -379,29 +379,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect("/?error=no_code");
       }
 
-      // Get redirect URI using same logic as login route
-      const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
-      const protocol = req.get('x-forwarded-proto') || 'https';
-      const redirectUri = `${protocol}://${host}/api/auth/callback/google`;
+      // Get redirect URI - use APP_URL env var in production for reliability
+      const redirectUri = process.env.APP_URL
+        ? `${process.env.APP_URL}/api/auth/callback/google`
+        : (() => {
+            const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
+            const protocol = req.get('x-forwarded-proto') || 'https';
+            return `${protocol}://${host}/api/auth/callback/google`;
+          })();
 
       // Exchange authorization code for access token
       console.log("OAuth callback - redirect URI:", redirectUri);
 
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          code: req.query.code as string,
-          client_id: process.env.GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-          redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
-        }),
-      });
-
-      const tokenData = await tokenResponse.json();
+      let tokenData: any;
+      try {
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            code: req.query.code as string,
+            client_id: process.env.GOOGLE_CLIENT_ID!,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }),
+        });
+        tokenData = await tokenResponse.json();
+      } catch (err) {
+        console.error("OAuth token fetch error:", err);
+        return res.redirect("/?error=token_fetch_failed");
+      }
 
       if (!tokenData.access_token) {
         console.error("OAuth token exchange failed:", tokenData);
@@ -409,13 +418,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user profile from Google
-      const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          'Authorization': `Bearer ${tokenData.access_token}`,
-        },
-      });
-
-      const profile = await profileResponse.json();
+      let profile: any;
+      try {
+        const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenData.access_token}`,
+          },
+        });
+        profile = await profileResponse.json();
+      } catch (err) {
+        console.error("OAuth profile fetch error:", err);
+        return res.redirect("/?error=profile_fetch_failed");
+      }
 
       if (!profile.email) {
         return res.redirect("/?error=no_email");
@@ -427,9 +441,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get default organization for new users
         const defaultOrgId = await getDefaultOrganizationId();
 
-        // Create new user using upsertUser
+        // Create new user using upsertUser (use UUID for consistency with email/password signup)
         const userData = {
-          id: profile.id,
+          id: crypto.randomUUID(),
           email: profile.email,
           firstName: profile.given_name || '',
           lastName: profile.family_name || '',
@@ -466,8 +480,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper to get the correct host for OAuth redirect
+  // In production, set APP_URL=https://www.repairrequest.org to guarantee a consistent redirect URI
   const getOAuthRedirectUri = (req: any) => {
-    // Use the request host to support both dev and production domains
+    if (process.env.APP_URL) {
+      return `${process.env.APP_URL}/api/auth/callback/google`;
+    }
     const host = req.get('host') || process.env.REPLIT_DOMAINS?.split(',')[0];
     const protocol = req.get('x-forwarded-proto') || 'https';
     return `${protocol}://${host}/api/auth/callback/google`;
