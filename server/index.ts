@@ -91,6 +91,9 @@ app.use('/api/login', authLimiter);
 app.use('/api/signup', authLimiter);
 app.use('/api/auth', authLimiter);
 
+// Must be before express.json() — Stripe needs raw body for signature verification
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json({ limit: "5mb" }));
 
 // Serve attached assets directory as static files FIRST

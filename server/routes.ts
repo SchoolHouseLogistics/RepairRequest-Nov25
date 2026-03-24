@@ -38,6 +38,7 @@ import {
   insertRequestPhotoSchema,
   insertContactMessageSchema,
   users,
+  PLAN_CONFIGS,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { db, contactMessages } from "./db";
@@ -2854,6 +2855,240 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     await dbStorage.updateOrganizationName(user.organizationId!, name.trim());
     res.json({ success: true });
+  });
+
+  // ────────────────────────────────────────────────────
+  // BILLING ROUTES
+  // ────────────────────────────────────────────────────
+
+  // POST /api/billing/create-checkout-session — admin only, creates Stripe subscription checkout
+  app.post("/api/billing/create-checkout-session", authMiddleware, requireRole("admin"), async (req: any, res) => {
+    const user = req.session.user!;
+    const { plan, interval } = req.body;
+
+    if (!plan || !interval) {
+      return res.status(400).json({ error: "plan and interval are required" });
+    }
+
+    try {
+      const { createCustomer, createCheckoutSession } = await import("./services/stripeService");
+
+      const org = await dbStorage.getOrganization(user.organizationId!);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      let customerId = org.stripeCustomerId;
+      if (!customerId) {
+        customerId = await createCustomer(user.email, org.name, org.id);
+        await dbStorage.updateOrganizationPlan(org.id, { stripeCustomerId: customerId });
+      }
+
+      const returnUrl = `${req.protocol}://${req.get("host")}`;
+      const url = await createCheckoutSession(customerId, plan, interval as "monthly" | "annual", org.id, returnUrl);
+
+      res.json({ url });
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // POST /api/billing/create-setup-checkout — public, $50 setup fee
+  app.post("/api/billing/create-setup-checkout", async (req: any, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "email is required" });
+    }
+
+    try {
+      const { createSetupFeeCheckout } = await import("./services/stripeService");
+
+      const returnUrl = `${req.protocol}://${req.get("host")}`;
+      const url = await createSetupFeeCheckout(email, returnUrl);
+
+      res.json({ url });
+    } catch (error) {
+      console.error("Error creating setup checkout:", error);
+      res.status(500).json({ error: "Failed to create setup checkout" });
+    }
+  });
+
+  // GET /api/billing/portal — admin only, Stripe customer portal
+  app.get("/api/billing/portal", authMiddleware, requireRole("admin"), async (req: any, res) => {
+    const user = req.session.user!;
+
+    try {
+      const { createPortalSession } = await import("./services/stripeService");
+
+      const org = await dbStorage.getOrganization(user.organizationId!);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      if (!org.stripeCustomerId) {
+        return res.status(400).json({ error: "No billing account found. Please subscribe to a plan first." });
+      }
+
+      const returnUrl = `${req.protocol}://${req.get("host")}`;
+      const url = await createPortalSession(org.stripeCustomerId, returnUrl);
+
+      res.json({ url });
+    } catch (error) {
+      console.error("Error creating portal session:", error);
+      res.status(500).json({ error: "Failed to create billing portal session" });
+    }
+  });
+
+  // GET /api/billing/status — authenticated, returns plan and usage info
+  app.get("/api/billing/status", authMiddleware, async (req: any, res) => {
+    const user = req.session.user!;
+
+    try {
+      const org = await dbStorage.getOrganization(user.organizationId!);
+      if (!org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      const plan = (org.plan || "free") as keyof typeof PLAN_CONFIGS;
+      const config = PLAN_CONFIGS[plan] ?? PLAN_CONFIGS.free;
+
+      const [currentUserCount, currentRequestCount] = await Promise.all([
+        dbStorage.countActiveUsersInOrg(org.id),
+        dbStorage.countRequestsThisMonth(org.id, org.requestCountResetDate ?? null),
+      ]);
+
+      res.json({
+        plan,
+        interval: org.planInterval ?? null,
+        limits: {
+          userLimit: config.userLimit,
+          monthlyRequestLimit: config.monthlyRequestLimit,
+        },
+        usage: {
+          users: currentUserCount,
+          requestsThisMonth: currentRequestCount,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching billing status:", error);
+      res.status(500).json({ error: "Failed to fetch billing status" });
+    }
+  });
+
+  // POST /api/billing/webhook — Stripe webhook handler (raw body, verified by signature)
+  app.post("/api/billing/webhook", async (req: any, res) => {
+    const signature = req.headers["stripe-signature"] as string;
+
+    if (!signature) {
+      return res.status(400).json({ error: "Missing stripe-signature header" });
+    }
+
+    let event: any;
+    try {
+      const { constructWebhookEvent } = await import("./services/stripeService");
+      event = await constructWebhookEvent(req.body as Buffer, signature);
+    } catch (error) {
+      console.error("Webhook signature verification failed:", error);
+      return res.status(400).json({ error: "Webhook signature verification failed" });
+    }
+
+    try {
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object;
+          const { organizationId, plan, interval } = session.metadata ?? {};
+
+          if (organizationId && plan) {
+            await dbStorage.updateOrganizationPlan(Number(organizationId), {
+              plan,
+              planInterval: interval ?? null,
+              stripeCustomerId: session.customer,
+              requestCountResetDate: new Date(),
+            });
+          }
+          break;
+        }
+
+        case "customer.subscription.updated": {
+          const subscription = event.data.object;
+          const priceMap: Record<string, { plan: string; interval: string }> = {
+            [process.env.STRIPE_STARTER_MONTHLY_PRICE_ID || ""]: { plan: "starter", interval: "monthly" },
+            [process.env.STRIPE_STARTER_ANNUAL_PRICE_ID || ""]: { plan: "starter", interval: "annual" },
+            [process.env.STRIPE_PRO_MONTHLY_PRICE_ID || ""]: { plan: "professional", interval: "monthly" },
+            [process.env.STRIPE_PRO_ANNUAL_PRICE_ID || ""]: { plan: "professional", interval: "annual" },
+            [process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || ""]: { plan: "premium", interval: "monthly" },
+            [process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID || ""]: { plan: "premium", interval: "annual" },
+          };
+
+          const priceId = subscription.items?.data?.[0]?.price?.id;
+          const mapped = priceMap[priceId];
+
+          if (mapped) {
+            const org = await dbStorage.getOrganizationByStripeCustomerId(subscription.customer);
+            if (org) {
+              await dbStorage.updateOrganizationPlan(org.id, {
+                plan: mapped.plan,
+                planInterval: mapped.interval,
+              });
+            }
+          }
+          break;
+        }
+
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object;
+          const org = await dbStorage.getOrganizationByStripeCustomerId(subscription.customer);
+          if (org) {
+            await dbStorage.updateOrganizationPlan(org.id, {
+              plan: "free",
+              planInterval: null,
+            });
+          }
+          break;
+        }
+
+        case "invoice.payment_failed": {
+          const invoice = event.data.object;
+          const org = await dbStorage.getOrganizationByStripeCustomerId(invoice.customer);
+          if (org) {
+            const adminEmails = await dbStorage.getOrganizationAdminEmails(org.id);
+            for (const email of adminEmails) {
+              try {
+                await sendEmail({
+                  to: email,
+                  subject: "Action Required: Payment Failed for RepairRequest",
+                  html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                      <h2 style="color: #d32f2f;">Payment Failed</h2>
+                      <p>A payment for your RepairRequest subscription has failed.</p>
+                      <p>Please update your payment method to avoid service interruption.</p>
+                      <p style="text-align: center; margin: 30px 0;">
+                        <a href="${req.protocol}://${req.get("host")}/billing" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Update Payment Method</a>
+                      </p>
+                      <p style="color: #999; font-size: 12px;">If you have questions, please contact support.</p>
+                    </div>
+                  `,
+                });
+              } catch (emailError) {
+                console.error("Failed to send payment failure email:", emailError);
+              }
+            }
+          }
+          break;
+        }
+
+        default:
+          // Unhandled event type — ignore
+          break;
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Error processing webhook event:", error);
+      res.status(500).json({ error: "Webhook handler failed" });
+    }
   });
 
   const httpServer = createServer(app);
