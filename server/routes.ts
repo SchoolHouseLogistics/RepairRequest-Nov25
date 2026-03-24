@@ -65,6 +65,23 @@ const authMiddleware = (req: any, res: any, next: any) => {
   next();
 };
 
+// Role-based authorization middleware
+const requireRole = (role: string) => (req: any, res: any, next: any) => {
+  const user = req.session?.user;
+  if (!user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const allowedRoles: Record<string, string[]> = {
+    admin: ["admin", "super_admin"],
+    super_admin: ["super_admin"],
+  };
+  const allowed = allowedRoles[role] ?? [role];
+  if (!allowed.includes(user.role)) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  next();
+};
+
 // Type for authenticated user from session
 type AuthenticatedUser = {
   id: string;
@@ -2744,6 +2761,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error proxying S3 image:', err);
       res.status(500).json({ error: 'Failed to fetch image' });
     }
+  });
+
+  // POST /api/invitations — create and send an invitation
+  app.post("/api/invitations", authMiddleware, requireRole("admin"), async (req: any, res) => {
+    const { email, role } = req.body;
+    const user = req.session.user!;
+
+    if (!email || !role) {
+      return res.status(400).json({ error: "Email and role are required" });
+    }
+
+    const validRoles = ["requester", "maintenance", "tech", "admin"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const invitation = await dbStorage.createInvitation({
+      email,
+      organizationId: user.organizationId!,
+      role,
+      invitedById: user.id,
+      token,
+      expiresAt,
+    });
+
+    // Send invitation email
+    const appUrl = process.env.APP_URL || `https://${req.headers.host}`;
+    const inviteLink = `${appUrl}/signup?invite=${token}`;
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: `You've been invited to join RepairRequest`,
+        html: `
+          <p>You've been invited to join an organization on RepairRequest.</p>
+          <p>Click the link below to create your account:</p>
+          <p><a href="${inviteLink}">${inviteLink}</a></p>
+          <p>This invitation expires in 7 days.</p>
+        `,
+      });
+    } catch (err) {
+      console.error("Failed to send invitation email:", err);
+    }
+
+    res.json({ invitation });
+  });
+
+  // GET /api/invitations — list invitations for the admin's organization
+  app.get("/api/invitations", authMiddleware, requireRole("admin"), async (req: any, res) => {
+    const user = req.session.user!;
+    const invitations = await dbStorage.getInvitationsByOrganization(user.organizationId!);
+    res.json(invitations);
+  });
+
+  // POST /api/onboarding/complete — mark onboarding as completed
+  app.post("/api/onboarding/complete", authMiddleware, requireRole("admin"), async (req: any, res) => {
+    const user = req.session.user!;
+    await dbStorage.markOnboardingCompleted(user.organizationId!);
+    res.json({ success: true });
+  });
+
+  // GET /api/onboarding/status — get onboarding completion status
+  app.get("/api/onboarding/status", authMiddleware, async (req: any, res) => {
+    const user = req.session.user!;
+    if (!user.organizationId) {
+      return res.json({ completed: false });
+    }
+    const completed = await dbStorage.getOnboardingStatus(user.organizationId);
+    res.json({ completed });
+  });
+
+  // PATCH /api/user/organization — update organization name during onboarding
+  app.patch("/api/user/organization", authMiddleware, requireRole("admin"), async (req: any, res) => {
+    const user = req.session.user!;
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Organization name is required" });
+    }
+
+    await dbStorage.updateOrganizationName(user.organizationId!, name.trim());
+    res.json({ success: true });
   });
 
   const httpServer = createServer(app);
