@@ -756,18 +756,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create building (super admin only)
+  // Create building (super admin or org admin)
   app.post("/api/admin/buildings", authMiddleware, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await dbStorage.getUser(userId);
 
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (user?.role !== 'super_admin' && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
+      // For org admins, inject their organizationId (ignore any body value)
+      const bodyWithOrg = user.role === 'admin'
+        ? { ...req.body, organizationId: user.organizationId }
+        : req.body;
+
       // Validate input with Zod schema
-      const parseResult = createBuildingSchema.safeParse(req.body);
+      const parseResult = createBuildingSchema.safeParse(bodyWithOrg);
       if (!parseResult.success) {
         return res.status(400).json({
           message: "Invalid building data",
@@ -797,19 +802,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update building (super admin only)
+  // Update building (super admin or org admin)
   app.patch("/api/admin/buildings/:id", authMiddleware, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await dbStorage.getUser(userId);
 
-      if (user?.role !== 'super_admin') {
-        return res.status(403).json({ message: "Super admin access required" });
+      if (user?.role !== 'super_admin' && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
       }
 
       const buildingId = parseInt(req.params.id);
       if (isNaN(buildingId)) {
         return res.status(400).json({ message: "Invalid building ID" });
+      }
+
+      // Org admins may only update buildings within their own organization
+      if (user.role === 'admin') {
+        if (!user.organizationId) {
+          return res.status(403).json({ message: "No organization assigned" });
+        }
+        const orgBuildings = await dbStorage.getBuildingsByOrganization(user.organizationId);
+        const owned = orgBuildings.some((b: any) => b.id === buildingId);
+        if (!owned) {
+          return res.status(403).json({ message: "Access denied to this building" });
+        }
       }
 
       // Validate input with Zod schema
@@ -1689,6 +1706,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Super Admin API routes for managing buildings and facilities
+
+  // Get own organization's buildings (org admin)
+  app.get("/api/admin/buildings", authMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await dbStorage.getUser(userId);
+
+      if (user?.role !== 'super_admin' && user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      if (!user.organizationId) {
+        return res.status(400).json({ message: "No organization assigned to user." });
+      }
+
+      const buildings = await dbStorage.getBuildingsByOrganization(user.organizationId);
+      res.json(buildings);
+    } catch (error) {
+      console.error("Error fetching buildings:", error);
+      res.status(500).json({ message: "Failed to fetch buildings" });
+    }
+  });
 
   // Get buildings for a specific organization (super admin only)
   app.get("/api/admin/buildings/:orgId", authMiddleware, async (req: any, res) => {
