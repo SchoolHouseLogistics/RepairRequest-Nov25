@@ -44,6 +44,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { db, contactMessages } from "./db";
 import { requests } from "@shared/schema";
 import bcrypt from "bcryptjs";
+import { checkUserLimit, checkRequestLimit } from "./middleware/planEnforcement";
 
 // Fix error with multer types
 declare module "express-serve-static-core" {
@@ -551,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PRIORITY ROUTES: Register before Vite middleware to avoid conflicts
 
   // Priority facilities request creation route (FACILITIES ONLY - building requests go to /api/building-requests)
-  app.post("/api/requests", authMiddleware, async (req: any, res) => {
+  app.post("/api/requests", authMiddleware, checkRequestLimit(), async (req: any, res) => {
     try {
       const user = req.user as AuthenticatedUser;
       const userId = user?.id;
@@ -2772,7 +2773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/invitations — create and send an invitation
-  app.post("/api/invitations", authMiddleware, requireRole("admin"), async (req: any, res) => {
+  app.post("/api/invitations", authMiddleware, requireRole("admin"), checkUserLimit(), async (req: any, res) => {
     const { email, role } = req.body;
     const user = req.session.user!;
 
