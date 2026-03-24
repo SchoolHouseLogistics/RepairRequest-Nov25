@@ -438,8 +438,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find or create user
       let user = await dbStorage.getUserByEmail(profile.email);
       if (!user) {
-        // Get default organization for new users
-        const defaultOrgId = await getDefaultOrganizationId();
+        // Check for invite token stored in session before the OAuth round-trip
+        const pendingInviteToken = (req.session as any).pendingInviteToken as string | undefined;
+        let organizationId: number | undefined;
+        let role: string = 'admin';
+
+        if (pendingInviteToken) {
+          const invitation = await dbStorage.getInvitationByToken(pendingInviteToken);
+          if (invitation && invitation.expiresAt > new Date()) {
+            organizationId = invitation.organizationId;
+            role = invitation.role;
+            await dbStorage.markInvitationAccepted(invitation.id);
+          }
+          // Clear the pending token regardless of validity
+          delete (req.session as any).pendingInviteToken;
+        }
+
+        if (!organizationId) {
+          // Create new org for self-service signup
+          const firstName = profile.given_name || 'User';
+          const { randomUUID } = await import("crypto");
+          const slug = `org-${randomUUID().slice(0, 8)}`;
+          const newOrg = await dbStorage.createOrganization({
+            name: `${firstName}'s School`,
+            slug,
+            settings: {},
+          });
+          organizationId = newOrg.id;
+        }
 
         // Create new user using upsertUser (use UUID for consistency with email/password signup)
         const userData = {
@@ -447,8 +473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: profile.email,
           firstName: profile.given_name || '',
           lastName: profile.family_name || '',
-          role: 'requester' as const,
-          organizationId: defaultOrgId,
+          role: role as any,
+          organizationId,
           profileImageUrl: profile.picture || null,
         };
         user = await dbStorage.upsertUser(userData);
@@ -497,6 +523,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const scope = "profile email";
     const state = req.sessionID;
 
+    // Store invite token in session so it survives the OAuth round-trip
+    const inviteToken = req.query.invite as string | undefined;
+    if (inviteToken) {
+      (req.session as any).pendingInviteToken = inviteToken;
+    }
+
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `response_type=code&` +
       `client_id=${clientId}&` +
@@ -513,6 +545,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const redirectUri = getOAuthRedirectUri(req);
     const scope = "profile email";
     const state = req.sessionID;
+
+    // Store invite token in session so it survives the OAuth round-trip
+    const inviteToken = req.query.invite as string | undefined;
+    if (inviteToken) {
+      (req.session as any).pendingInviteToken = inviteToken;
+    }
 
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
       `response_type=code&` +
@@ -2472,8 +2510,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashed = await bcrypt.hash(password, 10);
 
-      // Get default organization for new users
-      const defaultOrgId = await getDefaultOrganizationId();
+      // Check for invitation token in query params
+      const inviteToken = req.query.invite as string | undefined;
+      let organizationId: number | undefined;
+      let role = "admin";
+
+      if (inviteToken) {
+        const invitation = await dbStorage.getInvitationByToken(inviteToken);
+        if (invitation && invitation.expiresAt > new Date()) {
+          organizationId = invitation.organizationId;
+          role = invitation.role;
+          await dbStorage.markInvitationAccepted(invitation.id);
+        }
+      }
+
+      if (!organizationId) {
+        // Create new org for self-service signup
+        const { randomUUID } = await import("crypto");
+        const slug = `org-${randomUUID().slice(0, 8)}`;
+        const newOrg = await dbStorage.createOrganization({
+          name: `${firstName}'s School`,
+          slug,
+          settings: {},
+        });
+        organizationId = newOrg.id;
+      }
 
       // Create user
       const id = crypto.randomUUID();
@@ -2484,8 +2545,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName,
         lastName,
         password: hashed,
-        role: "requester",
-        organizationId: defaultOrgId,
+        role,
+        organizationId,
         createdAt: now,
         updatedAt: now,
       }).returning();
