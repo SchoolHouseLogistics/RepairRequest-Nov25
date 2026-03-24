@@ -45,7 +45,7 @@ import {
 } from "@shared/schema";
 import crypto from 'crypto';
 import { db } from "./db";
-import { eq, and, desc, count, sql, or, isNull, asc } from "drizzle-orm";
+import { eq, and, desc, count, sql, or, isNull, asc, gte } from "drizzle-orm";
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import path from 'path';
@@ -234,6 +234,12 @@ export interface IStorage {
   markOnboardingCompleted(orgId: number): Promise<void>;
   getOnboardingStatus(orgId: number): Promise<boolean>;
   updateOrganizationName(orgId: number, name: string): Promise<void>;
+
+  // Plan and billing
+  getOrganizationByStripeCustomerId(customerId: string): Promise<Organization | undefined>;
+  countActiveUsersInOrg(orgId: number): Promise<number>;
+  countRequestsThisMonth(orgId: number, resetDate: Date | null): Promise<number>;
+  updateOrganizationPlan(orgId: number, updates: Record<string, any>): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1598,6 +1604,52 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(organizations)
       .set({ name, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId));
+  }
+
+  // Plan and billing methods
+  async getOrganizationByStripeCustomerId(customerId: string): Promise<Organization | undefined> {
+    const [org] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.stripeCustomerId, customerId))
+      .limit(1);
+    return org;
+  }
+
+  async countActiveUsersInOrg(orgId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(and(eq(users.organizationId, orgId), isNull(users.deletedAt)));
+    return Number(result?.count ?? 0);
+  }
+
+  async countRequestsThisMonth(orgId: number, resetDate: Date | null): Promise<number> {
+    const since = resetDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(requests)
+      .where(and(
+        eq(requests.organizationId, orgId),
+        gte(requests.createdAt, since),
+      ));
+    return Number(result?.count ?? 0);
+  }
+
+  async updateOrganizationPlan(orgId: number, updates: {
+    plan?: string;
+    planInterval?: string | null;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    userLimit?: number | null;
+    monthlyRequestLimit?: number | null;
+    currentMonthRequestCount?: number;
+    requestCountResetDate?: Date | null;
+  }): Promise<void> {
+    await db
+      .update(organizations)
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(organizations.id, orgId));
   }
 }
