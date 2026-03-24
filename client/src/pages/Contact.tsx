@@ -102,7 +102,7 @@ export default function Contact() {
         <meta name="description" content="Contact RepairRequest for sales inquiries, demos, or support. Reach our team via email, phone, or schedule a personalized consultation." />
         <link rel="canonical" href="https://www.repairrequest.org/contact" />
         <meta property="og:title" content="Contact RepairRequest - Get in Touch" />
-        <meta property="og:description" content="Ready to transform your maintenance management? Contact us for a demo or to discuss your facility needs." />
+        <meta property="og:description" content="Ready to transform your school's maintenance management? Contact us for a demo or to discuss your campus needs." />
         <meta property="og:url" content="https://www.repairrequest.org/contact" />
         <meta name="twitter:title" content="Contact RepairRequest" />
         <meta name="twitter:description" content="Get in touch with our sales and support team." />
@@ -111,31 +111,6 @@ export default function Contact() {
       <PublicHeader currentPage="contact" />
 
       {/* Promotional Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm sm:text-base font-medium text-left">
-                🎉 Try RepairRequest Free for 30 Days! 
-                <span className="hidden sm:inline ml-2">• No credit card required • Full access to all features • Cancel anytime</span>
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <a href="/api/login" className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center">
-                Start Free Trial
-                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-              <button className="text-white hover:text-blue-100 transition-colors p-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -145,7 +120,7 @@ export default function Contact() {
             <span className="text-blue-600 block">Touch</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Ready to transform your maintenance management? We'd love to hear from you and discuss how RepairRequest can help your organization.
+            Ready to transform your school's maintenance management? We'd love to hear from you and discuss how RepairRequest can help your school.
           </p>
         </div>
       </section>
@@ -295,14 +270,10 @@ export default function Contact() {
                           data-testid="select-organization-type"
                         >
                           <option value="">Select an organization type</option>
-                          <option value="Education">Education</option>
-                          <option value="Commercial Real Estate">Commercial Real Estate</option>
-                          <option value="Residential Communities">Residential Communities</option>
-                          <option value="Healthcare">Healthcare</option>
-                          <option value="Government">Government</option>
-                          <option value="Hospitality">Hospitality</option>
-                          <option value="Manufacturing">Manufacturing</option>
-                          <option value="Other">Other</option>
+                          <option value="Independent School">Independent School</option>
+                          <option value="Charter School">Charter School</option>
+                          <option value="K-12 Public School">K-12 Public School</option>
+                          <option value="Other">Other Organization</option>
                         </select>
                       </div>
                       <div>
@@ -406,7 +377,7 @@ export default function Contact() {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Custom Quote</h3>
                   <p className="text-gray-600 text-sm">
-                    Get a tailored pricing proposal for your organization
+                    Get a tailored pricing proposal for your school
                   </p>
                 </CardContent>
               </Card>

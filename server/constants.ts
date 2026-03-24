@@ -14,6 +14,7 @@ export type RequestStatus = typeof REQUEST_STATUSES[keyof typeof REQUEST_STATUSE
 export const USER_ROLES = {
   REQUESTER: 'requester',
   MAINTENANCE: 'maintenance',
+  TECH: 'tech',
   ADMIN: 'admin',
   SUPER_ADMIN: 'super_admin',
 } as const;

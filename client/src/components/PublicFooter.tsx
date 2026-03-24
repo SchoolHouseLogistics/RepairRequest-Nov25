@@ -13,7 +13,7 @@ export default function PublicFooter() {
               <span className="text-xl font-bold">RepairRequest</span>
             </div>
             <p className="text-gray-300 mb-6 text-sm">
-              Streamlining maintenance management for property managers and organizations across all industries.
+              Streamlining maintenance management for schools and organizations that manage facilities.
             </p>
             <div className="flex space-x-3">
               <a href="https://x.com/SHouseLogistics" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">

@@ -185,14 +185,10 @@ export default function ContactForm({ showOrganizationType = true }: ContactForm
             data-testid="select-organizationType"
           >
             <option value="">Select organization type</option>
-            <option value="education">Education</option>
-            <option value="commercial-real-estate">Commercial Real Estate</option>
-            <option value="residential-communities">Residential Communities</option>
-            <option value="healthcare">Healthcare</option>
-            <option value="government">Government</option>
-            <option value="hospitality">Hospitality</option>
-            <option value="manufacturing">Manufacturing</option>
-            <option value="other">Other</option>
+            <option value="independent-school">Independent School</option>
+            <option value="charter-school">Charter School</option>
+            <option value="k12-public-school">K-12 Public School</option>
+            <option value="other">Other Organization</option>
           </select>
         </div>
       )}

@@ -34,13 +34,14 @@ import CookiePolicy from "@/pages/CookiePolicy";
 import Navbar from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import ScrollToTop from "@/components/ScrollToTop";
 import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
-import { BrowserRouter, Outlet, Route, Routes, useParams } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import OnboardingWizard from "@/pages/OnboardingWizard";
 
 function RequestDetailWrapper() {
   const { id } = useParams();
@@ -50,6 +51,19 @@ function RequestDetailWrapper() {
 function ProtectedLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    fetch("/api/onboarding/status")
+      .then((res) => res.json())
+      .then((data) => {
+        setNeedsOnboarding(!data.completed);
+        setOnboardingChecked(true);
+      })
+      .catch(() => setOnboardingChecked(true));
+  }, []);
 
   const toggleMobileSidebar = () => {
     setIsMobileSidebarOpen(!isMobileSidebarOpen);
@@ -68,6 +82,11 @@ function ProtectedLayout() {
   if (!isAuthenticated) {
     window.location.href = '/login';
     return null;
+  }
+
+  // Redirect admin users who haven't completed onboarding
+  if (onboardingChecked && needsOnboarding && user?.role === "admin" && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (
@@ -113,7 +132,7 @@ function AppContent() {
     <>
       <Helmet>
         <title>{organizationName} - Facilities Management System</title>
-        <meta name="description" content={`${organizationName}'s comprehensive facilities management system for repair requests and facility scheduling.`} />
+        <meta name="description" content={`${organizationName}'s facilities management system for repair requests and work orders.`} />
       </Helmet>
 
       <Routes>
@@ -137,6 +156,7 @@ function AppContent() {
 
         {/* Protected routes - ProtectedLayout handles auth redirect */}
         <Route element={<ProtectedLayout />}>
+          <Route path="/onboarding" element={<OnboardingWizard />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/new-facilities-request" element={<RequestForm />} />
           <Route path="/new-building-request" element={<BuildingRequestForm />} />

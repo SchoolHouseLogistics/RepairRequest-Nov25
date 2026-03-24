@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3, Calendar, GraduationCap, Home, FileText, QrCode, Smartphone, Wrench, ClipboardCheck, DollarSign, TrendingUp, Scale, Eye, Zap } from "lucide-react";
+import { CheckCircle, Users, Clock, Shield, Mail, Building2, Settings, BarChart3, Calendar, FileText, Smartphone, Wrench, DollarSign } from "lucide-react";
 import { Link } from "react-router-dom";
 import logoPath from "@assets/RepairRequest Logo Transparent_1750783382845.png";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
@@ -11,8 +10,6 @@ import PublicHeader from "@/components/layout/PublicHeader";
 import PublicFooter from "@/components/PublicFooter";
 import CalendlyWidget from "@/components/CalendlyWidget";
 import ContactForm from "@/components/ContactForm";
-
-type AudienceType = "schools" | "property-managers";
 
 const schoolsAddOns = [
   {
@@ -31,19 +28,9 @@ const schoolsAddOns = [
     description: "Assign work orders to external service providers while maintaining full visibility into progress and completion."
   },
   {
-    icon: Smartphone,
-    title: "Mobile Technician Tools",
-    description: "Enable facilities teams to update work orders, upload photos, and manage requests directly from their phones."
-  },
-  {
-    icon: QrCode,
-    title: "QR Code Room & Asset Tagging",
-    description: "Allow staff to scan a QR code in any room or on equipment to instantly submit a pre-filled maintenance request."
-  },
-  {
     icon: Settings,
-    title: "Custom Forms & Workflow Rules",
-    description: "Customize intake forms and approval workflows to match internal policies and department-specific needs."
+    title: "Request Templates",
+    description: "Create pre-filled request templates for common issues so staff can submit consistent, detailed requests in seconds."
   },
   {
     icon: FileText,
@@ -51,110 +38,29 @@ const schoolsAddOns = [
     description: "Maintain long-term records of repairs and service history to support audits, compliance, and capital planning."
   },
   {
-    icon: DollarSign,
-    title: "Stripe Payments & Chargebacks",
-    description: "Enable secure online payments for billable maintenance, damage charges, or after-hours work. Payments tie directly to work orders with receipts and tracking."
+    icon: Smartphone,
+    title: "Webhooks & Integrations",
+    description: "Connect RepairRequest to your existing tools with webhooks and API access for custom workflows and automation."
   }
 ];
 
-const propertyManagerAddOns = [
-  {
-    icon: Users,
-    title: "Tenant Maintenance Portal",
-    description: "Let tenants submit maintenance requests with photos and unit selection, reducing calls, texts, and confusion."
-  },
-  {
-    icon: FileText,
-    title: "Lease-Aware Request Rules",
-    description: "Flag billable vs non-billable issues and document responsibility to reduce disputes and enforce lease policies."
-  },
-  {
-    icon: DollarSign,
-    title: "Cost Tracking & Chargebacks",
-    description: "Track labor and materials per unit and generate clean records for reimbursements and tenant chargebacks."
-  },
-  {
-    icon: Building2,
-    title: "Multi-Property Portfolio Management",
-    description: "Manage multiple properties with property-level dashboards, portfolio reporting, and role-based access for managers."
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Inspection & Turnover Tools",
-    description: "Move-in and move-out inspection checklists with photos that automatically generate repair tasks and timelines."
-  },
-  {
-    icon: Clock,
-    title: "SLA & Response-Time Tracking",
-    description: "Measure response and resolution performance, separate emergency vs routine issues, and stay compliant."
-  },
-  {
-    icon: Wrench,
-    title: "Vendor Dispatch & Invoicing",
-    description: "Assign vendors, confirm completion, and upload/approve invoices with a clear maintenance paper trail."
-  },
-  {
-    icon: TrendingUp,
-    title: "Property Health Analytics",
-    description: "Spot high-cost units, recurring issues, and preventative maintenance opportunities to protect asset value."
-  },
-  {
-    icon: Scale,
-    title: "Legal & Compliance Documentation",
-    description: "Timestamped logs, photos, and communication history for audits, disputes, and insurance claims."
-  },
-  {
-    icon: DollarSign,
-    title: "Stripe Payments & Chargebacks",
-    description: "Collect tenant payments for billable repairs or damages directly from work orders with automatic receipts and payment tracking."
-  }
-];
 
 export default function LandingPage() {
-  const [audience, setAudience] = useState<AudienceType>("schools");
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Helmet>
-        <title>RepairRequest - Property & Facilities Management Software</title>
-        <meta name="description" content="Comprehensive facilities management software for schools, commercial buildings, residential communities & property managers. Streamline maintenance requests, scheduling & operations. Free 30-day trial." />
+        <title>RepairRequest - School Maintenance & Facilities Management Software</title>
+        <meta name="description" content="Maintenance and facilities management software built for schools. Streamline repair requests, work orders, and operations across your campus." />
         <link rel="canonical" href="https://www.repairrequest.org/" />
-        <meta property="og:title" content="RepairRequest - Facilities Management Software" />
-        <meta property="og:description" content="Transform facility management across all industries with our comprehensive platform for maintenance requests, scheduling, and operations. Trusted by schools, commercial & residential properties." />
+        <meta property="og:title" content="RepairRequest - School Maintenance Management" />
+        <meta property="og:description" content="Maintenance management built for schools. Streamline repair requests, work orders, and campus operations in one simple platform." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.repairrequest.org/" />
-        <meta name="twitter:title" content="RepairRequest - Facilities Management Software" />
-        <meta name="twitter:description" content="Comprehensive facilities management for all organizations." />
+        <meta name="twitter:title" content="RepairRequest - School Maintenance Software" />
+        <meta name="twitter:description" content="Maintenance management built for schools and campus operations." />
       </Helmet>
       
       <PublicHeader currentPage="home" />
-
-      {/* Promotional Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm sm:text-base font-medium text-left">
-                Try RepairRequest Free for 30 Days! 
-                <span className="hidden sm:inline ml-2">No credit card required. Full access to all features. Cancel anytime.</span>
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <a href="/api/login" className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center">
-                Start Free Trial
-                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-              <button className="text-white hover:text-blue-100 transition-colors p-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="py-12 px-4 sm:px-6 lg:px-8">
@@ -163,10 +69,10 @@ export default function LandingPage() {
             {/* Left Content */}
             <div className="text-center lg:text-left">
               <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">
-                Streamline Maintenance & Work Requests for Your Entire Organization
+                Streamline Maintenance & Work Requests for Your School
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                RepairRequest gives businesses one simple platform to capture issues, assign tasks, track progress, and keep teams aligned no matter what type of facilities you manage.
+                RepairRequest gives schools one simple platform to capture issues, assign tasks, track progress, and keep teachers, staff, and facilities teams aligned.
               </p>
               <div className="space-y-3 mb-8 max-w-2xl mx-auto lg:mx-0">
                 <div className="flex items-center space-x-3">
@@ -226,7 +132,7 @@ export default function LandingPage() {
               Why Choose RepairRequest?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Designed for property managers, facility teams, and organizations across all industries - from schools to commercial real estate.
+              Built for schools, facilities teams, and the administrators who keep campuses running.
             </p>
           </div>
 
@@ -306,122 +212,35 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Audience Toggle Section */}
+      {/* Built for Schools Section */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Built for Your Industry
+              Maintenance Requests, Without the Chaos.
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-              See how RepairRequest fits your specific needs
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              RepairRequest helps schools submit, prioritize, and track work orders—without emails, paper forms, or PDF backups.
             </p>
-            
-            {/* Audience Toggle */}
-            <div 
-              className="inline-flex bg-white rounded-lg p-1 shadow-md border"
-              role="tablist"
-              aria-label="Select your industry"
-            >
-              <button
-                role="tab"
-                aria-selected={audience === "schools"}
-                aria-controls="schools-content"
-                id="schools-tab"
-                onClick={() => setAudience("schools")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
-                  audience === "schools"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-                data-testid="toggle-schools"
-              >
-                <GraduationCap className="h-5 w-5" />
-                Schools
-              </button>
-              <button
-                role="tab"
-                aria-selected={audience === "property-managers"}
-                aria-controls="property-managers-content"
-                id="property-managers-tab"
-                onClick={() => setAudience("property-managers")}
-                className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
-                  audience === "property-managers"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-                data-testid="toggle-property-managers"
-              >
-                <Home className="h-5 w-5" />
-                Property Managers
-              </button>
+            <div className="space-y-4 max-w-md mx-auto text-left mb-8">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <span className="text-gray-700">Submit requests in seconds</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <span className="text-gray-700">Track status from request to completion</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                <span className="text-gray-700">Keep teachers, admins, and facilities teams aligned</span>
+              </div>
             </div>
-          </div>
-
-          {/* Audience-Specific Content */}
-          <div 
-            id={`${audience}-content`}
-            role="tabpanel"
-            aria-labelledby={`${audience}-tab`}
-            className="max-w-4xl mx-auto"
-          >
-            {audience === "schools" ? (
-              <div className="text-center">
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                  Maintenance Requests, Without the Chaos.
-                </h3>
-                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                  RepairRequest helps schools submit, prioritize, and track work orders—without emails, paper forms, or PDF backups.
-                </p>
-                <div className="space-y-4 max-w-md mx-auto text-left mb-8">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Submit requests in seconds</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Track status from request to completion</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Keep teachers, admins, and facilities teams aligned</span>
-                  </div>
-                </div>
-                <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                    Learn What's Possible
-                  </Button>
-                </a>
-              </div>
-            ) : (
-              <div className="text-center">
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-                  Work Orders That Keep Tenants and Teams Aligned.
-                </h3>
-                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                  RepairRequest helps landlords and property managers capture issues fast, assign work, track progress, and document everything—across units and properties.
-                </p>
-                <div className="space-y-4 max-w-md mx-auto text-left mb-8">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Tenant-friendly issue reporting</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Portfolio-wide visibility</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Clear documentation for chargebacks and compliance</span>
-                  </div>
-                </div>
-                <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                    Learn What's Possible
-                  </Button>
-                </a>
-              </div>
-            )}
+            <a href="https://calendly.com/schoolhouselogistics/30min" target="_blank" rel="noopener noreferrer">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                Learn What's Possible
+              </Button>
+            </a>
           </div>
         </div>
       </section>
@@ -439,7 +258,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(audience === "schools" ? schoolsAddOns : propertyManagerAddOns).map((addon, index) => (
+            {schoolsAddOns.map((addon, index) => (
               <Card key={index} className="border shadow-md relative" data-testid={`addon-card-${index}`}>
                 <CardHeader>
                   <Badge className="absolute top-4 right-4 bg-blue-100 text-blue-800 hover:bg-blue-100">
@@ -490,7 +309,7 @@ export default function LandingPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Schedule a Meeting</h2>
               </div>
               <p className="text-gray-600 mb-6">
-                Book a call with our team to discuss your organization's needs and explore our solutions.
+                Book a call with our team to discuss your school's needs and explore our solutions.
               </p>
               
               {/* Calendly Embed */}
@@ -504,7 +323,7 @@ export default function LandingPage() {
                 <h2 className="text-2xl font-bold text-gray-900">Get In Touch</h2>
               </div>
               <p className="text-gray-600 mb-6">
-                Ready to transform your operations? Send us a message and we'll get back to you promptly.
+                Ready to transform your school's operations? Send us a message and we'll get back to you promptly.
               </p>
               
               <ContactForm />

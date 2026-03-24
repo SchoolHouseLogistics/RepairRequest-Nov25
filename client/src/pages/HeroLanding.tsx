@@ -28,7 +28,7 @@ export default function HeroLanding() {
         <title>RepairRequest - Work Order & Maintenance Management</title>
         <meta
           name="description"
-          content="Transform your maintenance operations with RepairRequest. Easy request submission, automated workflows, and real-time tracking for schools, businesses, and organizations."
+          content="Transform your school's maintenance operations with RepairRequest. Easy request submission, automated workflows, and real-time tracking built for schools."
         />
         <link rel="canonical" href="https://www.repairrequest.org/landing" />
         <meta
@@ -82,13 +82,13 @@ export default function HeroLanding() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <Badge className="mb-6 bg-blue-100 text-blue-800 hover:bg-blue-100">
-            Trusted by Teams Across Every Industry
+            Built for Schools
           </Badge>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            One Central System for Maintenance & Work Requests
+            One Central System for School Maintenance & Work Requests
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            RepairRequest replaces emails, paper forms, and verbal requests with one simple platform for submitting, assigning, and tracking maintenance and work requests so nothing gets missed and everyone stays accountable.
+            RepairRequest replaces emails, paper forms, and verbal requests with one simple platform for submitting, assigning, and tracking maintenance and work requests—so nothing gets missed and your campus stays safe and functional.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link to="/signup">
@@ -165,8 +165,7 @@ export default function HeroLanding() {
               Why Choose RepairRequest?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Designed for property managers, facility teams, and organizations
-              across all industries : from schools to commercial real estate.
+              Built for schools, facilities teams, and the administrators who keep campuses running.
             </p>
           </div>
 
@@ -257,11 +256,10 @@ export default function HeroLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Trusted Across Industries
+              Built for Schools of Every Kind
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              RepairRequest serves diverse property management needs across
-              multiple sectors
+              RepairRequest serves schools and organizations that manage facilities and shared spaces
             </p>
           </div>
 
@@ -272,10 +270,10 @@ export default function HeroLanding() {
                   <Building2 className="h-8 w-8 text-blue-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Educational Institutions
+                  Independent Schools
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Schools, universities, and educational facilities
+                  Private and independent K-12 campuses
                 </p>
               </CardContent>
             </Card>
@@ -286,10 +284,10 @@ export default function HeroLanding() {
                   <BarChart3 className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Commercial Real Estate
+                  Charter Schools
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Office buildings, retail spaces, and commercial properties
+                  Charter networks and standalone campuses
                 </p>
               </CardContent>
             </Card>
@@ -300,10 +298,10 @@ export default function HeroLanding() {
                   <Users className="h-8 w-8 text-purple-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Residential Communities
+                  K-12 Schools
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  HOAs, apartment complexes, and residential properties
+                  Public school buildings and district facilities
                 </p>
               </CardContent>
             </Card>
@@ -314,10 +312,10 @@ export default function HeroLanding() {
                   <Shield className="h-8 w-8 text-orange-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Property Management
+                  Other Organizations
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Professional property management companies
+                  Churches, community centers, and other facilities
                 </p>
               </CardContent>
             </Card>
@@ -331,12 +329,12 @@ export default function HeroLanding() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-                Built for Modern Property Management
+                Built for Modern School Operations
               </h2>
               <p className="text-lg text-gray-600 mb-8">
                 RepairRequest understands the unique challenges of maintaining
-                facilities across different industries. Our platform adapts to
-                your specific needs while ensuring efficient operations.
+                school facilities. Our platform adapts to your campus needs
+                while keeping operations efficient and accountable.
               </p>
 
               <div className="space-y-4">
@@ -360,8 +358,8 @@ export default function HeroLanding() {
                 Ready to Get Started?
               </h3>
               <p className="text-gray-600 mb-6">
-                Join organizations across industries already using RepairRequest
-                to streamline their maintenance operations.
+                Join schools already using RepairRequest to streamline
+                their maintenance operations.
               </p>
               <Link to="/signup">
                 <Button
@@ -398,8 +396,8 @@ export default function HeroLanding() {
                 </div>
               </div>
               <p className="text-gray-400">
-                Streamlining maintenance management for property managers and
-                organizations across all industries.
+                Streamlining maintenance management for schools and
+                organizations that manage facilities.
               </p>
             </div>
 

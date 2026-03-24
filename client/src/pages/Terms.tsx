@@ -27,31 +27,6 @@ export default function Terms() {
       <PublicHeader currentPage="" />
 
       {/* Promotional Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm sm:text-base font-medium text-left">
-                🎉 Try RepairRequest Free for 30 Days! 
-                <span className="hidden sm:inline ml-2">• No credit card required • Full access to all features • Cancel anytime</span>
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <a href="/api/login" className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center">
-                Start Free Trial
-                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-              <button className="text-white hover:text-blue-100 transition-colors p-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
