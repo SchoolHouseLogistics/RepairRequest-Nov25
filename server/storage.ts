@@ -13,6 +13,7 @@ import {
   buildings,
   facilities,
   passwordResetTokens,
+  invitations,
   type User,
   type UpsertUser,
   type InsertRequest,
@@ -39,6 +40,8 @@ import {
   type InsertBuilding,
   type Facility,
   type InsertFacility,
+  type Invitation,
+  type InsertInvitation,
 } from "@shared/schema";
 import crypto from 'crypto';
 import { db } from "./db";
@@ -220,6 +223,17 @@ export interface IStorage {
   validatePasswordResetToken(token: string): Promise<{ valid: boolean; userId?: string }>;
   usePasswordResetToken(token: string): Promise<boolean>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<boolean>;
+
+  // Invitations
+  createInvitation(data: InsertInvitation): Promise<Invitation>;
+  getInvitationByToken(token: string): Promise<Invitation | undefined>;
+  getInvitationsByOrganization(orgId: number): Promise<Invitation[]>;
+  markInvitationAccepted(id: number): Promise<void>;
+
+  // Onboarding
+  markOnboardingCompleted(orgId: number): Promise<void>;
+  getOnboardingStatus(orgId: number): Promise<boolean>;
+  updateOrganizationName(orgId: number, name: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1532,6 +1546,59 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return result.length > 0;
+  }
+
+  // Invitation methods
+  async createInvitation(data: InsertInvitation): Promise<Invitation> {
+    const [invitation] = await db.insert(invitations).values(data).returning();
+    return invitation;
+  }
+
+  async getInvitationByToken(token: string): Promise<Invitation | undefined> {
+    const [invitation] = await db
+      .select()
+      .from(invitations)
+      .where(and(eq(invitations.token, token), isNull(invitations.acceptedAt)))
+      .limit(1);
+    return invitation;
+  }
+
+  async getInvitationsByOrganization(orgId: number): Promise<Invitation[]> {
+    return db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.organizationId, orgId))
+      .orderBy(desc(invitations.createdAt));
+  }
+
+  async markInvitationAccepted(id: number): Promise<void> {
+    await db
+      .update(invitations)
+      .set({ acceptedAt: new Date() })
+      .where(eq(invitations.id, id));
+  }
+
+  // Onboarding methods
+  async markOnboardingCompleted(orgId: number): Promise<void> {
+    await db
+      .update(organizations)
+      .set({ onboardingCompleted: true, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId));
+  }
+
+  async getOnboardingStatus(orgId: number): Promise<boolean> {
+    const [org] = await db
+      .select({ onboardingCompleted: organizations.onboardingCompleted })
+      .from(organizations)
+      .where(eq(organizations.id, orgId));
+    return org?.onboardingCompleted ?? false;
+  }
+
+  async updateOrganizationName(orgId: number, name: string): Promise<void> {
+    await db
+      .update(organizations)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(organizations.id, orgId));
   }
 }
 
