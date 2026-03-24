@@ -149,38 +149,6 @@ const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
 });
 
-/**
- * Get the default organization ID for new user signups.
- * Uses environment variable DEFAULT_ORGANIZATION_ID if set,
- * otherwise falls back to the first active organization.
- * Returns undefined if no organizations exist (requires manual assignment).
- */
-async function getDefaultOrganizationId(): Promise<number | undefined> {
-  // Check environment variable first
-  const envOrgId = process.env.DEFAULT_ORGANIZATION_ID;
-  if (envOrgId) {
-    const orgId = parseInt(envOrgId, 10);
-    if (!isNaN(orgId)) {
-      // Verify the organization exists
-      const org = await dbStorage.getOrganization(orgId);
-      if (org) {
-        return orgId;
-      }
-      console.warn(`DEFAULT_ORGANIZATION_ID ${orgId} not found in database, falling back to first org`);
-    }
-  }
-
-  // Fallback: get the first organization
-  const orgs = await dbStorage.getAllOrganizations();
-  if (orgs && orgs.length > 0) {
-    return orgs[0].id;
-  }
-
-  // No organizations exist - new users will need manual org assignment
-  console.warn("No organizations found in database - new users will have no organization assigned");
-  return undefined;
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
 
   // Forgot password - request password reset
