@@ -22,7 +22,7 @@ const faqItems = [
   },
   {
     question: "Who is RepairRequest for?",
-    answer: "RepairRequest is built for any organization that manages facilities or shared spaces, including schools and school districts, churches and religious organizations, office buildings, athletic facilities, nonprofits, and community organizations. If people report issues and someone needs to fix them, RepairRequest fits."
+    answer: "RepairRequest is built for schools—independent schools, charter schools, K-12 public schools, and any organization that manages facilities or shared spaces like churches and community centers. If people report issues and someone needs to fix them, RepairRequest fits."
   },
   {
     question: "How do users submit a repair request?",
@@ -70,7 +70,7 @@ const faqItems = [
   },
   {
     question: "How do we get started?",
-    answer: "Getting started is easy. Request access, set up your facilities and users, and start accepting repair requests immediately."
+    answer: "Getting started is free. Sign up, set up your buildings and rooms, and start accepting repair requests immediately. Upgrade anytime for more users, requests, and features."
   }
 ];
 
@@ -89,33 +89,6 @@ export default function FAQ() {
       </Helmet>
 
       <PublicHeader currentPage="faq" />
-
-      {/* Promotional Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm sm:text-base font-medium text-left">
-                Try RepairRequest Free for 30 Days! 
-                <span className="hidden sm:inline ml-2">No credit card required. Full access to all features. Cancel anytime.</span>
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <a href="/api/login" className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center">
-                Start Free Trial
-                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-              <button className="text-white hover:text-blue-100 transition-colors p-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
