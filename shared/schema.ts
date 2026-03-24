@@ -39,6 +39,15 @@ export const organizations = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"), // Soft delete support
+    onboardingCompleted: boolean("onboarding_completed").default(false),
+    plan: varchar("plan").notNull().default("free"),
+    planInterval: varchar("plan_interval"),
+    stripeCustomerId: varchar("stripe_customer_id"),
+    stripeSubscriptionId: varchar("stripe_subscription_id"),
+    userLimit: integer("user_limit").default(100),
+    monthlyRequestLimit: integer("monthly_request_limit").default(500),
+    currentMonthRequestCount: integer("current_month_request_count").default(0),
+    requestCountResetDate: timestamp("request_count_reset_date"),
   },
   (table) => [
     index("IDX_organizations_domain").on(table.domain),
@@ -470,6 +479,19 @@ export const requestPhotos = pgTable(
   ]
 );
 
+// Invitations table for email-based user invitations
+export const invitations = pgTable("invitations", {
+  id: serial("id").primaryKey(),
+  email: varchar("email").notNull(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  role: varchar("role").notNull().default("requester"),
+  invitedById: varchar("invited_by_id").references(() => users.id).notNull(),
+  token: varchar("token").notNull().unique(),
+  acceptedAt: timestamp("accepted_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Contact messages table for storing contact form submissions
 export const contactMessages = pgTable("contact_messages", {
   id: serial("id").primaryKey(),
@@ -616,6 +638,9 @@ export type RequestPhoto = typeof requestPhotos.$inferSelect;
 export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
 export type ContactMessage = typeof contactMessages.$inferSelect;
 
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = typeof invitations.$inferInsert;
+
 // Audit log schemas and types
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   id: true,
@@ -669,5 +694,21 @@ export const insertRateLimitRecordSchema = createInsertSchema(rateLimitRecords).
 export type InsertRateLimitRecord = z.infer<typeof insertRateLimitRecordSchema>;
 export type RateLimitRecord = typeof rateLimitRecords.$inferSelect;
 
+export const PLAN_CONFIGS = {
+  free: { userLimit: 100, monthlyRequestLimit: 500 },
+  starter: { userLimit: 250, monthlyRequestLimit: 2000 },
+  professional: { userLimit: 500, monthlyRequestLimit: 5000 },
+  premium: { userLimit: null, monthlyRequestLimit: 10000 },
+  enterprise: { userLimit: null, monthlyRequestLimit: null },
+} as const;
 
+export type PlanType = keyof typeof PLAN_CONFIGS;
 
+export const PLAN_FEATURES: Record<string, PlanType[]> = {
+  "multi-building": ["starter", "professional", "premium", "enterprise"],
+  "request-templates": ["starter", "professional", "premium", "enterprise"],
+  "analytics": ["professional", "premium", "enterprise"],
+  "messaging": ["professional", "premium", "enterprise"],
+  "api-webhooks": ["premium", "enterprise"],
+  "audit-logging": ["premium", "enterprise"],
+};
